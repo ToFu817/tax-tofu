@@ -3,345 +3,141 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>稅務小豆腐｜白話稅務與預約諮詢</title>
-  
+  <title>稅務小豆腐｜用白話陪你搞懂稅務</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root {
-      --primary-yellow: #FFF2CC;
-      --bg-light: #FFFBF0;
-      --tofu-white: #FFFFFF;
-      --accent-brown: #8D7B68;
-      --text-main: #54473F;
-      --pink-blush: #FFD1DC;
-      --card-shadow: 0 10px 25px rgba(141, 123, 104, 0.1);
+      --yellow: #FFF2CC;
+      --light-yellow: #FFF8E6;
+      --white: #FFFFFF;
+      --text: #54473F;
+      --accent: #8D7B68;
     }
-
-    * { box-sizing: border-box; }
-    
     body {
       margin: 0;
-      font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
-      color: var(--text-main);
-      background: var(--bg-light);
-      line-height: 1.6;
+      font-family: "Noto Sans TC", sans-serif;
+      color: var(--text);
+      background: var(--light-yellow);
     }
-
-    /* ===== 啟動畫面 ===== */
-    #splash {
-      position: fixed;
-      inset: 0;
-      background: var(--primary-yellow);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-    }
-
-    .tofu-loader {
-      position: relative;
-      width: 120px;
-      height: 120px;
-      background: var(--tofu-white);
-      border-radius: 25px;
-      box-shadow: 0 10px 0 rgba(0,0,0,0.05);
-      animation: rollIn 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .loader-face {
-      position: relative;
-      width: 60px;
-      height: 30px;
-    }
-
-    .loader-eye {
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      background: #333;
-      border-radius: 50%;
-      top: 5px;
-    }
-    .loader-eye.left { left: 5px; }
-    .loader-eye.right { right: 5px; }
-
-    @keyframes rollIn {
-      0% { transform: translateX(200vw) rotate(720deg); }
-      100% { transform: translateX(0) rotate(0deg); }
-    }
-
-    .hide-splash {
-      animation: fadeOut 0.8s forwards ease-in-out;
-    }
-
-    @keyframes fadeOut {
-      to { opacity: 0; visibility: hidden; transform: scale(1.1); }
-    }
-
-    /* ===== 主網頁內容 ===== */
-    nav { padding: 20px; text-align: center; }
-    .logo-text { font-weight: bold; font-size: 24px; color: var(--accent-brown); letter-spacing: 2px; }
-
-    .hero { padding: 40px 20px; text-align: center; max-width: 800px; margin: 0 auto; }
-    .hero h1 { font-size: 2.8rem; margin-bottom: 10px; color: var(--accent-brown); }
-    .hero p { font-size: 1.1rem; color: #a3917d; }
-
-    /* 服務卡片區 */
-    .services-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 25px;
-      max-width: 1000px;
-      margin: 40px auto;
-      padding: 0 20px;
-    }
-
-    .service-card {
-      background: var(--tofu-white);
-      padding: 40px 30px;
-      border-radius: 30px;
-      text-align: center;
-      box-shadow: var(--card-shadow);
-      transition: all 0.3s ease;
-      cursor: pointer;
-      border: 2px solid transparent;
-    }
-
-    .service-card:hover { transform: translateY(-10px); border-color: var(--primary-yellow); }
-    .icon-box { font-size: 50px; margin-bottom: 20px; display: block; }
-    .service-card h3 { margin: 10px 0; color: var(--accent-brown); }
-    .service-card p { font-size: 0.95rem; color: #888; }
-
-    /* ===== 預約彈窗樣式 ===== */
-    #booking-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(84, 71, 63, 0.6);
-      display: none; /* 預設隱藏 */
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      padding: 20px;
-    }
-
-    .modal-content {
+    .card {
       background: var(--white);
-      background-color: #fff;
-      width: 100%;
-      max-width: 450px;
-      padding: 30px;
-      border-radius: 30px;
-      position: relative;
-      animation: modalSlideUp 0.4s ease-out;
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+      transition: 0.3s;
     }
-
-    @keyframes modalSlideUp {
-      from { transform: translateY(50px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+    .card:hover { transform: translateY(-5px); }
+    #splash {
+      position: fixed; inset: 0; background: var(--yellow);
+      display: flex; align-items: center; justify-content: center; z-index: 9999;
+      transition: opacity 0.8s ease-out;
     }
-
-    .close-btn {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      font-size: 24px;
-      cursor: pointer;
-      color: #ccc;
+    .tofu-box {
+      width: 100px; height: 100px; background: white; border-radius: 20px;
+      animation: bounce 1s infinite alternate;
     }
-
-    .modal-content h2 { color: var(--accent-brown); text-align: center; margin-bottom: 20px; }
-    
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
-    input, select, textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #eee;
-      border-radius: 12px;
-      background: #fdfdfd;
-      font-size: 16px;
-    }
-
-    .submit-booking {
-      width: 100%;
-      padding: 15px;
-      background: var(--accent-brown);
-      color: white;
-      border: none;
-      border-radius: 50px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-
-    /* 聯絡區塊 */
-    .contact-section {
-      background: var(--primary-yellow);
-      margin-top: 60px;
-      padding: 60px 20px;
-      text-align: center;
-      border-radius: 50px 50px 0 0;
-    }
-
-    .cta-button {
-      display: inline-block;
-      padding: 15px 40px;
-      background: var(--accent-brown);
-      color: white;
-      text-decoration: none;
-      border-radius: 50px;
-      font-weight: bold;
-      margin-top: 10px;
-      transition: transform 0.2s;
-    }
-
-    footer { padding: 40px 20px; text-align: center; font-size: 14px; color: #b0a498; }
-
-    @media (max-width: 600px) {
-      .hero h1 { font-size: 2.2rem; }
-    }
+    @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-20px); } }
   </style>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAcYPHZJcSTBRbhKy018keO7FiPyzb4c84",
+      authDomain: "tax-tofu.firebaseapp.com",
+      projectId: "tax-tofu",
+      storageBucket: "tax-tofu.firebasestorage.app",
+      messagingSenderId: "1031361168988",
+      appId: "1:1031361168988:web:ce06888cfd84de93958899",
+      measurementId: "G-TQ29X7NGZY"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const appId = "tax-tofu";
+
+    // 監聽文章數據
+    const articlesCol = collection(db, 'artifacts', appId, 'public', 'data', 'articles');
+    onSnapshot(query(articlesCol, orderBy('createdAt', 'desc')), (snapshot) => {
+      const container = document.getElementById('articles-list');
+      container.innerHTML = "";
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        container.innerHTML += `
+          <div class="card">
+            <h3 class="font-bold text-lg mb-2 text-stone-700">📘 ${data.title}</h3>
+            <p class="text-sm text-stone-500 whitespace-pre-wrap leading-relaxed">${data.content.substring(0, 150)}...</p>
+            <button class="mt-4 text-xs font-bold text-amber-600 border-b border-amber-600">閱讀更多</button>
+          </div>
+        `;
+      });
+    });
+
+    // 監聽工具數據
+    const toolsCol = collection(db, 'artifacts', appId, 'public', 'data', 'tools');
+    onSnapshot(query(toolsCol, orderBy('createdAt', 'desc')), (snapshot) => {
+      const container = document.getElementById('tools-list');
+      container.innerHTML = "";
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        container.innerHTML += `
+          <a href="${data.link}" target="_blank" class="card block">
+            <h3 class="font-bold text-lg mb-1 text-stone-700">🧮 ${data.name}</h3>
+            <p class="text-sm text-stone-500">${data.description || '點擊進入工具頁面'}</p>
+          </a>
+        `;
+      });
+    });
+
+    // 啟動動畫消失
+    window.onload = () => {
+      setTimeout(() => {
+        const splash = document.getElementById('splash');
+        splash.style.opacity = '0';
+        setTimeout(() => splash.style.display = 'none', 800);
+      }, 1500);
+    };
+  </script>
 </head>
 <body>
 
-  <!-- 啟動畫面 -->
   <div id="splash">
-    <div class="tofu-loader">
-      <div class="loader-face">
-        <div class="loader-eye left"></div>
-        <div class="loader-eye right"></div>
-      </div>
-    </div>
+    <div class="tofu-box"></div>
   </div>
 
-  <nav><div class="logo-text">TAX TOFU</div></nav>
+  <header class="py-12 px-4 text-center bg-white border-b border-amber-50">
+    <h1 class="text-4xl font-black text-stone-800 tracking-tight">稅務小豆腐</h1>
+    <p class="text-stone-400 mt-2">用白話，陪你搞懂稅務與記帳</p>
+  </header>
 
-  <main>
-    <section class="hero">
-      <h1>稅務小豆腐</h1>
-      <p>讓繁瑣的稅務與帳務，像切豆腐一樣軟 Q 好上手</p>
-    </section>
-
-    <section class="services-grid">
-      <div class="service-card" onclick="window.location.href='#news'">
-        <span class="icon-box">📄</span>
-        <h3>稅務資訊</h3>
-        <p>掌握最新稅務趨勢，看這裡準沒錯。</p>
-      </div>
-
-      <div class="service-card" onclick="window.location.href='#tools'">
-        <span class="icon-box">🧮</span>
-        <h3>稅務小工具</h3>
-        <p>自製簡易試算工具與操作手冊，新手小白也能變稅務大師。</p>
-      </div>
-
-      <!-- 預約諮詢卡片：點擊開啟預約彈窗 -->
-      <div class="service-card" onclick="openBooking()">
-        <span class="icon-box">📅</span>
-        <h3>預約諮詢</h3>
-        <p>線上預約專業諮詢，為您的稅務把關。</p>
-      </div>
-    </section>
-
-    <section class="contact-section">
-      <h2>想更直接地聊聊嗎？</h2>
-      <p>點擊下方按鈕，直接透過 LINE 與我們聯絡</p>
-      <a href="https://page.line.me/196amypy" class="cta-button">立即諮詢</a>
-    </section>
-  </main>
-
-  <!-- 預約彈窗 -->
-  <div id="booking-modal">
-    <div class="modal-content">
-      <span class="close-btn" onclick="closeBooking()">&times;</span>
-      <h2>預約小豆腐諮詢</h2>
+  <section class="max-w-4xl mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
       
-      <div class="form-group">
-        <label>您的稱呼</label>
-        <input type="text" id="user_name" placeholder="例如：豆腐先生">
+      <!-- 左側：最新文章區 -->
+      <div class="md:col-span-2">
+        <h2 class="text-xl font-bold mb-6 flex items-center gap-2">🔥 最新稅務攻略</h2>
+        <div id="articles-list" class="space-y-4">
+          <div class="p-8 text-center text-stone-300">豆腐正在從雲端搬運文章...</div>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label>諮詢項目</label>
-        <select id="booking_type">
-          <option value="公司設立與記帳">公司記帳</option>
-          <option value="稅務諮詢">稅務諮詢</option>
-          <option value="節稅規劃">節稅規劃</option>
-          <option value="其他">其他</option>
-        </select>
+      <!-- 右側：工具區 -->
+      <div>
+        <h2 class="text-xl font-bold mb-6 flex items-center gap-2">🛠️ 實用工具</h2>
+        <div id="tools-list" class="space-y-4">
+          <div class="p-8 text-center text-stone-300">載入工具中...</div>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label>聯絡電話</label>
-        <input type="tel" id="user_phone" placeholder="請輸入電話">
-      </div>
-
-      <div class="form-group">
-        <label>簡單描述您的問題</label>
-        <textarea id="user_msg" rows="3" placeholder="讓我們預先做點功課..."></textarea>
-      </div>
-
-      <button class="submit-booking" onclick="submitToLine()">送出預約並開啟 LINE</button>
     </div>
-  </div>
+  </section>
 
-  <footer>
-    <div>© 稅務小豆腐工作室</div>
-    <a href="admin.html" style="color:#ddd; text-decoration:none; font-size:10px;">管理端</a>
+  <footer class="bg-stone-100 py-12 text-center text-stone-400 text-sm mt-12">
+    <div>&copy; 2024 稅務小豆腐 - 你的創業好夥伴</div>
   </footer>
-
-  <script>
-    // 啟動畫面
-    window.addEventListener("load", () => {
-      setTimeout(() => {
-        document.getElementById("splash").classList.add("hide-splash");
-      }, 2500);
-    });
-
-    // 彈窗控制
-    function openBooking() {
-      document.getElementById("booking-modal").style.display = "flex";
-    }
-
-    function closeBooking() {
-      document.getElementById("booking-modal").style.display = "none";
-    }
-
-    // 提交預約並導向 LINE (帶入預填訊息)
-    function submitToLine() {
-      const name = document.getElementById('user_name').value;
-      const type = document.getElementById('booking_type').value;
-      const phone = document.getElementById('user_phone').value;
-      const msg = document.getElementById('user_msg').value;
-
-      if(!name || !phone) {
-        alert("請至少填寫稱呼與電話唷！");
-        return;
-      }
-
-      // 建立 LINE 預填訊息字串
-      const lineMsg = `您好！我想預約諮詢。\n\n【稱呼】：${name}\n【項目】：${type}\n【電話】：${phone}\n【問題】：${msg}`;
-      
-      // 使用 encodeURIComponent 編碼訊息
-      const encodedMsg = encodeURIComponent(lineMsg);
-      
-      // 跳轉到 LINE 官方帳號（帶訊息功能的連結目前有限制，最保險是跳轉後讓使用者貼上，
-      // 或是直接導向官方帳號後讓使用者主動發送。這裡先導向你的網址）
-      alert("預約資料已準備好，請在開啟 LINE 後傳送訊息給我們唷！");
-      window.location.href = "https://lin.ee/yZ7lFq9";
-    }
-
-    // 點擊彈窗外部關閉
-    window.onclick = function(event) {
-      const modal = document.getElementById("booking-modal");
-      if (event.target == modal) {
-        closeBooking();
-      }
-    }
-  </script>
 
 </body>
 </html>
