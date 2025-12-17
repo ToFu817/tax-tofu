@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>稅務小豆腐｜用白話陪你搞懂稅務</title>
+  <title>稅務小豆腐｜讓稅務像切豆腐一樣簡單</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root {
@@ -20,6 +20,37 @@
       background: var(--light-yellow);
       overflow-x: hidden;
     }
+    
+    /* ===== 升級版彈跳豆腐動畫 ===== */
+    #splash {
+      position: fixed; inset: 0; background: var(--yellow);
+      display: flex; align-items: center; justify-content: center; z-index: 9999;
+      transition: opacity 0.8s ease-out;
+    }
+    .tofu-box {
+      width: 120px; height: 120px; background: white; border-radius: 24px;
+      position: relative;
+      box-shadow: 0 10px 0 rgba(0,0,0,0.05);
+      animation: bounce-tofu 0.8s infinite alternate cubic-bezier(0.45, 0, 0.55, 1);
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* 豆腐眼睛 */
+    .tofu-eyes {
+      display: flex; gap: 20px;
+    }
+    .eye {
+      width: 12px; height: 12px; background: #54473F; border-radius: 50%;
+      animation: blink 3s infinite;
+    }
+    @keyframes bounce-tofu {
+      from { transform: translateY(0) scaleX(1); }
+      to { transform: translateY(-40px) scaleX(1.05); }
+    }
+    @keyframes blink {
+      0%, 90%, 100% { transform: scaleY(1); }
+      95% { transform: scaleY(0.1); }
+    }
+
     .card {
       background: var(--white);
       border-radius: 20px;
@@ -31,18 +62,6 @@
     }
     .card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     
-    #splash {
-      position: fixed; inset: 0; background: var(--yellow);
-      display: flex; align-items: center; justify-content: center; z-index: 9999;
-      transition: opacity 0.8s ease-out;
-    }
-    .tofu-box {
-      width: 100px; height: 100px; background: white; border-radius: 20px;
-      animation: bounce 1s infinite alternate;
-    }
-    @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-20px); } }
-
-    /* 子頁面過場 */
     .sub-page {
       position: fixed; top: 0; left: 100%; width: 100%; height: 100%;
       background: var(--light-yellow); z-index: 1000;
@@ -50,6 +69,11 @@
       overflow-y: auto;
     }
     .sub-page.active { left: 0; }
+
+    /* 文章排版支援 */
+    .article-content img { max-width: 100%; border-radius: 12px; margin: 16px 0; }
+    .article-content a { color: #8D7B68; text-decoration: underline; }
+    .article-content h1 { font-size: 1.5rem; font-weight: bold; margin-top: 1rem; }
   </style>
 
   <!-- Firebase SDK -->
@@ -71,7 +95,7 @@
     const db = getFirestore(app);
     const appId = "tax-tofu";
 
-    // 監聽文章數據 (顯示在子頁面)
+    // 監聽文章
     const articlesCol = collection(db, 'artifacts', appId, 'public', 'data', 'articles');
     onSnapshot(query(articlesCol, orderBy('createdAt', 'desc')), (snapshot) => {
       const container = document.getElementById('articles-list');
@@ -80,14 +104,14 @@
         const data = doc.data();
         container.innerHTML += `
           <div class="card cursor-default">
-            <h3 class="font-bold text-lg mb-2 text-stone-700">📘 ${data.title}</h3>
-            <p class="text-sm text-stone-500 whitespace-pre-wrap leading-relaxed">${data.content}</p>
+            <h3 class="font-bold text-xl mb-4 text-stone-700">📘 ${data.title}</h3>
+            <div class="article-content text-stone-500 leading-loose">${data.content}</div>
           </div>
         `;
       });
     });
 
-    // 監聽工具數據 (顯示在子頁面)
+    // 監聽工具
     const toolsCol = collection(db, 'artifacts', appId, 'public', 'data', 'tools');
     onSnapshot(query(toolsCol, orderBy('createdAt', 'desc')), (snapshot) => {
       const container = document.getElementById('tools-list');
@@ -95,7 +119,7 @@
       snapshot.forEach(doc => {
         const data = doc.data();
         container.innerHTML += `
-          <a href="${data.link}" target="_blank" class="card block">
+          <a href="${data.link}" target="_blank" class="card block border-l-4 border-amber-200">
             <h3 class="font-bold text-lg mb-1 text-stone-700">🧮 ${data.name}</h3>
             <p class="text-sm text-stone-500">${data.description || '點擊進入工具頁面'}</p>
           </a>
@@ -110,10 +134,9 @@
           splash.style.opacity = '0';
           setTimeout(() => splash.style.display = 'none', 800);
         }
-      }, 1500);
+      }, 2000); // 增加一點彈跳時間
     };
 
-    // 導覽功能
     window.showPage = (id) => {
       document.getElementById(id).classList.add('active');
       document.body.style.overflow = 'hidden';
@@ -126,72 +149,72 @@
 </head>
 <body>
 
+  <!-- 帶眼睛的彈跳豆腐 -->
   <div id="splash">
-    <div class="tofu-box"></div>
+    <div class="tofu-box">
+      <div class="tofu-eyes">
+        <div class="eye"></div>
+        <div class="eye"></div>
+      </div>
+    </div>
   </div>
 
-  <!-- 主頁面 -->
-  <header class="py-16 px-4 text-center bg-white border-b border-amber-50">
-    <h1 class="text-5xl font-black text-stone-800 tracking-tight">稅務小豆腐</h1>
-    <p class="text-stone-400 mt-4 text-lg">用白話，陪你搞懂稅務與記帳</p>
+  <header class="py-20 px-4 text-center bg-white border-b border-amber-50 shadow-sm">
+    <h1 class="text-5xl font-black text-stone-800 tracking-tighter">稅務小豆腐</h1>
+    <p class="text-stone-400 mt-6 text-lg font-medium">致力於讓稅務，像是切一塊豆腐一樣簡單的事情</p>
   </header>
 
-  <main class="max-w-4xl mx-auto px-4 py-12">
-    <!-- 三大主要區塊 -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <main class="max-w-4xl mx-auto px-4 py-16">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
       
       <!-- 區塊 1：稅務新知 -->
-      <div class="card text-center py-10" onclick="showPage('page-articles')">
-        <div class="text-5xl mb-4">📘</div>
-        <h2 class="text-xl font-bold">稅務新知</h2>
+      <div class="card text-center py-12" onclick="showPage('page-articles')">
+        <div class="text-6xl mb-6">📘</div>
+        <h2 class="text-2xl font-bold">稅務新知</h2>
         <p class="text-sm text-stone-400 mt-2">最新法規白話解析</p>
       </div>
 
       <!-- 區塊 2：稅務小工具 -->
-      <div class="card text-center py-10" onclick="showPage('page-tools')">
-        <div class="text-5xl mb-4">🧮</div>
-        <h2 class="text-xl font-bold">稅務小工具</h2>
+      <div class="card text-center py-12" onclick="showPage('page-tools')">
+        <div class="text-6xl mb-6">🧮</div>
+        <h2 class="text-2xl font-bold">稅務小工具</h2>
         <p class="text-sm text-stone-400 mt-2">各式算表與實用連結</p>
       </div>
 
-      <!-- 區塊 3：預約諮詢 -->
-      <a href="https://line.me" target="_blank" class="card text-center py-10 block">
-        <div class="text-5xl mb-4">💬</div>
-        <h2 class="text-xl font-bold">預約諮詢</h2>
+      <!-- 區塊 3：預約諮詢 (已更新網址) -->
+      <a href="https://lin.ee/98FMxAk" target="_blank" class="card text-center py-12 block">
+        <div class="text-6xl mb-6">💬</div>
+        <h2 class="text-2xl font-bold">預約諮詢</h2>
         <p class="text-sm text-stone-400 mt-2">一對一豆腐親切服務</p>
       </a>
 
     </div>
   </main>
 
-  <!-- 子頁面：文章列表 -->
   <div id="page-articles" class="sub-page p-6 md:p-12">
     <div class="max-w-3xl mx-auto">
-      <button onclick="closePage('page-articles')" class="mb-8 text-stone-400 hover:text-stone-800 flex items-center gap-2">
+      <button onclick="closePage('page-articles')" class="mb-8 text-stone-400 hover:text-stone-800 flex items-center gap-2 font-bold">
         ← 返回首頁
       </button>
-      <h2 class="text-3xl font-bold mb-10">📘 最新稅務新知</h2>
-      <div id="articles-list" class="space-y-6">
-        <!-- 資料由 Firebase 填入 -->
-      </div>
+      <h2 class="text-3xl font-black mb-10 text-stone-800">📘 稅務最新動態</h2>
+      <div id="articles-list" class="space-y-8"></div>
     </div>
   </div>
 
-  <!-- 子頁面：工具列表 -->
   <div id="page-tools" class="sub-page p-6 md:p-12">
     <div class="max-w-3xl mx-auto">
-      <button onclick="closePage('page-tools')" class="mb-8 text-stone-400 hover:text-stone-800 flex items-center gap-2">
+      <button onclick="closePage('page-tools')" class="mb-8 text-stone-400 hover:text-stone-800 flex items-center gap-2 font-bold">
         ← 返回首頁
       </button>
-      <h2 class="text-3xl font-bold mb-10">🧮 稅務小工具</h2>
-      <div id="tools-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- 資料由 Firebase 填入 -->
-      </div>
+      <h2 class="text-3xl font-black mb-10 text-stone-800">🧮 實用小工具</h2>
+      <div id="tools-list" class="grid grid-cols-1 gap-4"></div>
     </div>
   </div>
 
-  <footer class="bg-stone-100 py-12 text-center text-stone-400 text-sm">
-    <div>&copy; 2024 稅務小豆腐 - 你的創業好夥伴</div>
+  <footer class="bg-stone-800 py-16 text-center text-stone-100 text-sm mt-12">
+    <div class="font-bold text-lg mb-2">稅務小豆腐 - 你的創業好夥伴</div>
+    <div class="text-stone-400 mb-4">官方line帳號：@196amypy</div>
+    <div class="w-12 h-1 bg-amber-200 mx-auto mt-6 opacity-30"></div>
   </footer>
 
 </body>
