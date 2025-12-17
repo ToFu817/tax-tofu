@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>稅務小豆腐</title>
+  <style>
+    :root {
+      --yellow: #FFF2CC;
+      --light-yellow: #FFF8E6;
+      --white: #FFFFFF;
+      --gray: #E5E5E5;
+      --pink: #FFD1DC;
+      --text: #444;
+      --eye: #333;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans TC", sans-serif;
+      color: var(--text);
+      background: var(--light-yellow);
+      overflow-x: hidden;
+    }
+
+    /* ===== 啟動畫面 ===== */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: var(--yellow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      overflow: hidden;
+    }
+
+    /* 豆腐主體 */
+    .tofu {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      background: var(--white);
+      border-radius: 30px;
+      box-shadow: 0 15px 0 rgba(0,0,0,0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* 動畫：滾入 + 抵達後的跳動 */
+      animation: 
+        rollIn 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards,
+        happyJump 0.6s 1.5s ease-in-out infinite;
+    }
+
+    /* 豆腐的小臉蛋 */
+    .face {
+      position: relative;
+      width: 80px;
+      height: 40px;
+    }
+
+    /* 眼睛 */
+    .eye {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: var(--eye);
+      border-radius: 50%;
+      top: 10px;
+    }
+    .eye.left { left: 10px; }
+    .eye.right { right: 10px; }
+
+    /* 腮紅 */
+    .blush {
+      position: absolute;
+      width: 15px;
+      height: 8px;
+      background: var(--pink);
+      border-radius: 50%;
+      bottom: 5px;
+    }
+    .blush.left { left: 0px; }
+    .blush.right { right: 0px; }
+
+    /* 滾入動畫 */
+    @keyframes rollIn {
+      0% {
+        transform: translateX(300vw) rotate(720deg);
+      }
+      80% {
+        transform: translateX(-20px) rotate(-10deg); /* 稍微衝過頭一點點 */
+      }
+      100% {
+        transform: translateX(0) rotate(0deg);
+      }
+    }
+
+    /* 抵達後的開心跳動 */
+    @keyframes happyJump {
+      0%, 100% { transform: translateY(0) scale(1, 1); }
+      50% { transform: translateY(-15px) scale(1.05, 0.95); }
+    }
+
+    /* 消失動畫 */
+    .hide {
+      animation: fadeOut 0.8s forwards ease-in-out;
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; transform: scale(1); }
+      to { opacity: 0; transform: scale(1.1); visibility: hidden; }
+    }
+
+    /* ===== 主內容區塊 ===== */
+    header {
+      padding: 60px 16px;
+      text-align: center;
+      background: var(--white);
+      border-bottom: 5px solid var(--yellow);
+    }
+
+    header h1 { 
+      margin: 0; 
+      font-size: 2.5rem;
+      color: #bfa35d;
+    }
+
+    section {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+      transition: transform 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      color: #d4a373;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    footer {
+      background: #fdf6e3;
+      padding: 40px 20px;
+      text-align: center;
+      font-size: 15px;
+      color: #888;
+    }
+
+    footer div { margin: 8px 0; }
+
+    /* 手機版微調 */
+    @media (max-width: 600px) {
+      .tofu { width: 100px; height: 100px; border-radius: 20px; }
+      .face { width: 60px; height: 30px; }
+      .eye { width: 8px; height: 8px; }
+      header h1 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 啟動畫面 -->
+  <div id="splash">
+    <div class="tofu">
+      <div class="face">
+        <div class="eye left"></div>
+        <div class="eye right"></div>
+        <div class="blush left"></div>
+        <div class="blush right"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主網站 -->
+  <header>
+    <h1>稅務小豆腐</h1>
+    <p>讓繁瑣的稅務，像切一塊豆腐一樣簡單</p>
+  </header>
+
+  <section>
+    <div class="card">
+      <h2>📘 稅務小筆記</h2>
+      <p>我們會定期更新最新的稅務法規，用最白話的方式告訴你如何節稅。</p>
+    </div>
+
+    <div class="card">
+      <h2>🧮 聰明算稅工具</h2>
+      <p>提供營所稅、綜所稅、勞健保費率等多種試算功能，一鍵搞定。</p>
+    </div>
+
+    <div class="card">
+      <h2>📅 豆腐來幫忙</h2>
+      <p>有稅務上的疑難雜症嗎？點擊預約，我們陪你一起解決問題。</p>
+    </div>
+  </section>
+
+  <footer>
+    <div>📞 聯絡電話：0900-000-000</div>
+    <div>💬 LINE 官方帳號：@tax-tofu</div>
+    <div>🕘 服務時間：週一～週五 09:00–18:00</div>
+    <div>© 2024 稅務小豆腐 版權所有</div>
+  </footer>
+
+  <script>
+    // 啟動畫面控制：
+    // 滾入時間 1.5s + 停留跳動時間 1s，共 2.5s 後啟動隱藏動畫
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        const splash = document.getElementById("splash");
+        splash.classList.add("hide");
+      }, 2800);
+    });
+  </script>
+
+</body>
+</html>
