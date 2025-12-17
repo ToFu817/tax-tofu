@@ -52,15 +52,12 @@
     onAuthStateChanged(auth, (user) => {
       const statusEl = document.getElementById('auth-status');
       if (user) {
-        statusEl.innerText = "🟢 雲端連線正常 (已授權)";
+        statusEl.innerText = "🟢 雲端連線正常";
         statusEl.className = "text-xs mt-1 text-green-600 font-medium";
-      } else {
-        statusEl.innerText = "🔴 未連線";
-        statusEl.className = "text-xs mt-1 text-red-500 font-medium";
       }
     });
 
-    // 監聽文章列表 (用於右側管理區)
+    // 監聽文章列表
     const articlesCol = collection(db, 'artifacts', appId, 'public', 'data', 'articles');
     onSnapshot(query(articlesCol, orderBy('createdAt', 'desc')), (snapshot) => {
       const list = document.getElementById('manage-articles-list');
@@ -83,7 +80,7 @@
       });
     });
 
-    // 監聽工具列表 (用於右側管理區)
+    // 監聽工具列表
     const toolsCol = collection(db, 'artifacts', appId, 'public', 'data', 'tools');
     onSnapshot(query(toolsCol, orderBy('createdAt', 'desc')), (snapshot) => {
       const list = document.getElementById('manage-tools-list');
@@ -106,7 +103,6 @@
       });
     });
 
-    // 將 Firebase 實例導出到 window
     window.db = db;
     window.appId = appId;
     window.addDoc = addDoc;
@@ -122,189 +118,198 @@
       --primary-yellow: #FFF2CC;
       --accent-brown: #8D7B68;
     }
-    body { background: #fdfaf5; color: #54473F; font-family: sans-serif; }
+    body { background: #fdfaf5; color: #54473F; font-family: sans-serif; transition: 0.3s; }
     .card { background: white; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 25px; margin-bottom: 20px; }
     .btn-primary { background: var(--accent-brown); color: white; padding: 12px 24px; border-radius: 12px; font-weight: bold; transition: 0.3s; }
     .btn-primary:hover:not(:disabled) { transform: scale(1.02); opacity: 0.9; }
     .input-field { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px; outline: none; transition: 0.2s; }
     .input-field:focus { border-color: var(--accent-brown); }
     
-    /* Quill 編輯器樣式自訂 */
-    #editor-container {
-      height: 400px;
-      border-bottom-left-radius: 12px;
-      border-bottom-right-radius: 12px;
-      font-family: inherit;
+    #editor-container { height: 400px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+    .ql-toolbar.ql-snow { border-top-left-radius: 12px; border-top-right-radius: 12px; background: #fcfcfc; }
+
+    /* 登入鎖樣式 */
+    #lock-screen {
+      position: fixed; inset: 0; background: var(--primary-yellow);
+      z-index: 10000; display: flex; align-items: center; justify-content: center;
+      transition: 0.5s;
     }
-    .ql-toolbar.ql-snow {
-      border-top-left-radius: 12px;
-      border-top-right-radius: 12px;
-      background: #fcfcfc;
-    }
+    .lock-box { background: white; padding: 40px; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; max-width: 320px; width: 90%; }
+    .lock-tofu { width: 60px; height: 60px; background: var(--primary-yellow); border-radius: 15px; margin: 0 auto 20px; position: relative; }
+    .lock-tofu::after, .lock-tofu::before { content: ""; position: absolute; width: 6px; height: 6px; background: #54473F; border-radius: 50%; top: 20px; }
+    .lock-tofu::before { left: 15px; } .lock-tofu::after { right: 15px; }
+    
+    .hidden-content { opacity: 0; pointer-events: none; transform: translateY(20px); }
+    .visible-content { opacity: 1; pointer-events: auto; transform: translateY(0); }
   </style>
 </head>
 <body class="p-4 md:p-10">
 
-  <header class="max-w-6xl mx-auto mb-10 flex justify-between items-end">
-    <div>
-      <h1 class="text-3xl font-black text-stone-700 tracking-tight">小豆腐營運中樞 🛠️</h1>
-      <p id="auth-status" class="text-xs mt-1 text-amber-500 font-medium">🟡 正在檢查雲端連線...</p>
+  <!-- 密碼鎖畫面 -->
+  <div id="lock-screen">
+    <div class="lock-box">
+      <div class="lock-tofu"></div>
+      <h2 class="text-xl font-bold mb-2">營運中樞安全檢查</h2>
+      <p class="text-sm text-stone-400 mb-6">請輸入管理員密碼以繼續</p>
+      <input type="password" id="admin-password" placeholder="輸入密碼" class="input-field text-center mb-4 tracking-widest">
+      <button onclick="checkPassword()" class="btn-primary w-full">進入後台</button>
+      <p id="error-msg" class="text-red-400 text-xs mt-3 hidden">密碼錯誤，請再試一次</p>
     </div>
-    <div class="flex gap-4">
-      <button onclick="resetForm()" class="text-sm text-stone-400 hover:text-stone-600 font-medium">清空輸入框</button>
-    </div>
-  </header>
+  </div>
 
-  <main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-    
-    <!-- 左側：富文本編輯與發佈區 (佔 7 格) -->
-    <div class="lg:col-span-7">
-      <section class="card">
-        <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-stone-800">✍️ <span id="form-title">撰寫部落格文章</span></h2>
-        
-        <div class="space-y-6">
-          <input type="hidden" id="edit-id">
-          <input type="hidden" id="edit-type">
+  <!-- 主管理內容 -->
+  <div id="main-content-wrapper" class="hidden-content transition-all duration-700">
+    <header class="max-w-6xl mx-auto mb-10 flex justify-between items-end">
+      <div>
+        <h1 class="text-3xl font-black text-stone-700 tracking-tight">小豆腐營運中樞 🛠️</h1>
+        <p id="auth-status" class="text-xs mt-1 text-amber-500 font-medium">🟡 正在連線中...</p>
+      </div>
+      <div class="flex gap-4">
+        <button onclick="logout()" class="text-sm text-stone-400 hover:text-red-400 font-medium">登出中樞</button>
+      </div>
+    </header>
 
-          <div>
-            <label class="block text-sm font-bold mb-1 text-stone-500">標題或工具名稱</label>
-            <input type="text" id="main-title" placeholder="例如：113年營業稅申報懶人包" class="input-field text-lg font-bold">
+    <main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div class="lg:col-span-7">
+        <section class="card">
+          <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-stone-800">✍️ <span id="form-title">撰寫部落格文章</span></h2>
+          <div class="space-y-6">
+            <input type="hidden" id="edit-id">
+            <input type="hidden" id="edit-type">
+            <div>
+              <label class="block text-sm font-bold mb-1 text-stone-500">標題或工具名稱</label>
+              <input type="text" id="main-title" placeholder="例如：113年營業稅申報懶人包" class="input-field text-lg font-bold">
+            </div>
+            <div>
+              <label class="block text-sm font-bold mb-1 text-stone-500">外部連結 (若為工具，請填寫網址)</label>
+              <input type="text" id="sub-link" placeholder="https://..." class="input-field">
+            </div>
+            <div>
+              <label class="block text-sm font-bold mb-1 text-stone-500">文章內容排版</label>
+              <div id="editor-container"></div>
+            </div>
+            <button onclick="saveData()" id="save-btn" class="btn-primary w-full shadow-lg shadow-stone-200 py-4 text-lg">確認儲存並發佈</button>
           </div>
+        </section>
+      </div>
 
-          <div id="link-field-container">
-            <label class="block text-sm font-bold mb-1 text-stone-500">外部連結 (若為工具，請填寫網址)</label>
-            <input type="text" id="sub-link" placeholder="https://..." class="input-field">
-            <p class="text-[10px] text-stone-400 mt-1">* 填寫連結將自動歸類為「稅務工具」並略過文章詳細內容</p>
-          </div>
-
-          <div>
-            <label class="block text-sm font-bold mb-1 text-stone-500">文章內容排版</label>
-            <!-- Quill 容器 -->
-            <div id="editor-container"></div>
-          </div>
-
-          <button onclick="saveData()" id="save-btn" class="btn-primary w-full shadow-lg shadow-stone-200 py-4 text-lg">
-            確認儲存並發佈
-          </button>
-        </div>
-      </section>
-    </div>
-
-    <!-- 右側：資料清單管理 (佔 5 格) -->
-    <div class="lg:col-span-5 space-y-6">
-      
-      <!-- 文章管理 -->
-      <section class="card">
-        <h2 class="text-lg font-bold mb-4 border-b pb-2 flex items-center gap-2">📘 稅務新知 <span class="text-xs bg-stone-100 px-2 py-1 rounded text-stone-400">總覽</span></h2>
-        <div id="manage-articles-list" class="divide-y divide-stone-100 max-h-[300px] overflow-y-auto pr-2">
-          <p class="py-4 text-stone-300 text-center italic">載入清單中...</p>
-        </div>
-      </section>
-
-      <!-- 工具管理 -->
-      <section class="card">
-        <h2 class="text-lg font-bold mb-4 border-b pb-2 flex items-center gap-2">🧮 稅務工具 <span class="text-xs bg-stone-100 px-2 py-1 rounded text-stone-400">總覽</span></h2>
-        <div id="manage-tools-list" class="divide-y divide-stone-100 max-h-[300px] overflow-y-auto pr-2">
-          <p class="py-4 text-stone-300 text-center italic">載入清單中...</p>
-        </div>
-      </section>
-
-    </div>
-
-  </main>
+      <div class="lg:col-span-5 space-y-6">
+        <section class="card">
+          <h2 class="text-lg font-bold mb-4 border-b pb-2 flex items-center gap-2">📘 稅務新知 <span class="text-xs bg-stone-100 px-2 py-1 rounded text-stone-400">管理</span></h2>
+          <div id="manage-articles-list" class="divide-y divide-stone-100 max-h-[300px] overflow-y-auto pr-2"></div>
+        </section>
+        <section class="card">
+          <h2 class="text-lg font-bold mb-4 border-b pb-2 flex items-center gap-2">🧮 稅務工具 <span class="text-xs bg-stone-100 px-2 py-1 rounded text-stone-400">管理</span></h2>
+          <div id="manage-tools-list" class="divide-y divide-stone-100 max-h-[300px] overflow-y-auto pr-2"></div>
+        </section>
+      </div>
+    </main>
+  </div>
 
   <script>
-    // 編輯功能：將資料填回富文本編輯器
-    function editItem(type, id, encodedData) {
-      const data = JSON.parse(decodeURIComponent(atob(encodedData)));
-      
-      document.getElementById('edit-id').value = id;
-      document.getElementById('edit-type').value = type;
-      
-      document.getElementById('main-title').value = data.title || data.name;
-      document.getElementById('sub-link').value = data.link || "";
-      
-      // 將內容載入 Quill
-      const content = data.content || data.description || "";
-      window.quill.root.innerHTML = content;
-      
-      document.getElementById('form-title').innerText = "正在修改內容";
-      document.getElementById('save-btn').innerText = "更新雲端資料";
-      
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    // ==========================================
+    // 🔑 密碼鎖邏輯 - 您可以在下面修改您的管理密碼
+    // ==========================================
+    const correctPassword = "8888"; 
+    // ==========================================
 
-    // 刪除功能
-    async function deleteItem(type, id) {
-      if(!confirm("⚠️ 確定要刪除這筆資料嗎？\n刪除後客戶端網頁也會同步移除。")) return;
+    function checkPassword() {
+      const input = document.getElementById('admin-password').value;
+      const errorMsg = document.getElementById('error-msg');
       
-      try {
-        await window.deleteDoc(window.doc(window.db, 'artifacts', window.appId, 'public', 'data', type, id));
-        alert("已成功移除！");
-      } catch (e) {
-        alert("刪除時發生錯誤。");
+      if (input === correctPassword) {
+        unlock();
+      } else {
+        errorMsg.classList.remove('hidden');
+        document.getElementById('admin-password').value = "";
       }
     }
 
-    // 儲存邏輯
+    function unlock() {
+      document.getElementById('lock-screen').style.opacity = "0";
+      setTimeout(() => {
+        document.getElementById('lock-screen').style.display = "none";
+        document.getElementById('main-content-wrapper').classList.replace('hidden-content', 'visible-content');
+        sessionStorage.setItem('isLoggedIn', 'true');
+      }, 500);
+    }
+
+    function logout() {
+      sessionStorage.removeItem('isLoggedIn');
+      window.location.reload();
+    }
+
+    // 檢查 Session
+    window.onload = () => {
+      if (sessionStorage.getItem('isLoggedIn') === 'true') {
+        unlock();
+      }
+      
+      // 監聽 Enter 鍵登入
+      document.getElementById('admin-password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') checkPassword();
+      });
+    };
+
+    // --- 管理功能邏輯 ---
+    function editItem(type, id, encodedData) {
+      const data = JSON.parse(decodeURIComponent(atob(encodedData)));
+      document.getElementById('edit-id').value = id;
+      document.getElementById('edit-type').value = type;
+      document.getElementById('main-title').value = data.title || data.name;
+      document.getElementById('sub-link').value = data.link || "";
+      window.quill.root.innerHTML = data.content || data.description || "";
+      document.getElementById('form-title').innerText = "正在修改內容";
+      document.getElementById('save-btn').innerText = "更新雲端資料";
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function deleteItem(type, id) {
+      if(!confirm("⚠️ 確定要刪除嗎？")) return;
+      try {
+        await window.deleteDoc(window.doc(window.db, 'artifacts', window.appId, 'public', 'data', type, id));
+        alert("已成功移除！");
+      } catch (e) { alert("刪除失敗。"); }
+    }
+
     async function saveData() {
       const id = document.getElementById('edit-id').value;
       const title = document.getElementById('main-title').value;
       const link = document.getElementById('sub-link').value;
-      
-      // 獲取 Quill 中的 HTML 內容
       const content = window.quill.root.innerHTML;
 
-      // 判斷分類
       let type = document.getElementById('edit-type').value;
-      if (!type) {
-        type = link.trim() !== "" ? "tools" : "articles";
-      }
+      if (!type) type = link.trim() !== "" ? "tools" : "articles";
 
-      if(!title || (type === 'articles' && window.quill.getText().trim() === "")) {
-        return alert("標題與文章內容是必填的喔！");
-      }
+      if(!title || (type === 'articles' && window.quill.getText().trim() === "")) return alert("請填寫完整喔！");
 
       const btn = document.getElementById('save-btn');
       btn.disabled = true;
-      btn.innerText = "正在同步雲端排版...";
+      btn.innerText = "同步中...";
 
       try {
         if(id) {
-          // 更新模式
           const docRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', type, id);
-          const updateData = type === 'articles' ? 
-            { title, content } : 
-            { name: title, description: content, link };
-          
+          const updateData = type === 'articles' ? { title, content } : { name: title, description: content, link };
           await window.updateDoc(docRef, updateData);
-          alert("✅ 排版已更新！");
         } else {
-          // 新增模式
           const colRef = window.collection(window.db, 'artifacts', window.appId, 'public', 'data', type);
           const newData = type === 'tools' ? 
             { name: title, description: content, link, createdAt: window.serverTimestamp() } : 
             { title, content, createdAt: window.serverTimestamp() };
-          
           await window.addDoc(colRef, newData);
-          alert("🎉 文章已精美發佈！");
         }
+        alert("儲存成功！");
         resetForm();
-      } catch (e) {
-        console.error(e);
-        alert("儲存失敗，請檢查權限設定。");
-      } finally {
-        btn.disabled = false;
-      }
+      } catch (e) { alert("儲存失敗"); } finally { btn.disabled = false; }
     }
 
-    // 重設表單
     function resetForm() {
       document.getElementById('edit-id').value = "";
       document.getElementById('edit-type').value = "";
       document.getElementById('main-title').value = "";
       document.getElementById('sub-link').value = "";
-      window.quill.setContents([]); // 清空編輯器
+      window.quill.setContents([]);
       document.getElementById('form-title').innerText = "撰寫部落格文章";
       document.getElementById('save-btn').innerText = "確認儲存並發佈";
     }
