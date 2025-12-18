@@ -34,6 +34,7 @@
     // 全域變數存儲數據
     let allCategories = {};
     let allArticles = [];
+    let allTools = [];
 
     // 初始化 Quill
     window.quill = new Quill('#editor-container', {
@@ -64,17 +65,26 @@
     const catsCol = collection(db, 'artifacts', appId, 'public', 'data', 'categories');
     onSnapshot(query(catsCol, orderBy('weight', 'desc')), (snapshot) => {
       const list = document.getElementById('manage-categories-list');
-      const select = document.getElementById('main-category');
-      const filterSelect = document.getElementById('filter-category');
+      const selectArt = document.getElementById('main-category');
+      const selectTool = document.getElementById('tool-category');
+      const filterArtSelect = document.getElementById('filter-category');
+      const filterToolSelect = document.getElementById('filter-tool-category');
       
       list.innerHTML = "";
-      const currentVal = select.value;
-      const currentFilter = filterSelect.value;
+      const currentArtVal = selectArt.value;
+      const currentToolVal = selectTool.value;
+      const currentArtFilter = filterArtSelect.value;
+      const currentToolFilter = filterToolSelect.value;
       
-      select.innerHTML = '<option value="">-- 選擇分類 --</option>';
-      filterSelect.innerHTML = '<option value="all">所有分類</option>';
+      const categoryOptions = '<option value="">-- 選擇分類 --</option>';
+      const filterOptions = '<option value="all">所有分類</option>';
       
-      allCategories = {}; // 重置
+      selectArt.innerHTML = categoryOptions;
+      selectTool.innerHTML = categoryOptions;
+      filterArtSelect.innerHTML = filterOptions;
+      filterToolSelect.innerHTML = filterOptions;
+      
+      allCategories = {}; 
 
       snapshot.forEach(record => {
         const item = record.data();
@@ -94,14 +104,20 @@
           </div>
         `;
 
-        select.innerHTML += `<option value="${id}">${item.name}</option>`;
-        filterSelect.innerHTML += `<option value="${id}">${item.name}</option>`;
+        const opt = `<option value="${id}">${item.name}</option>`;
+        selectArt.innerHTML += opt;
+        selectTool.innerHTML += opt;
+        filterArtSelect.innerHTML += opt;
+        filterToolSelect.innerHTML += opt;
       });
-      select.value = currentVal;
-      filterSelect.value = currentFilter;
+
+      selectArt.value = currentArtVal;
+      selectTool.value = currentToolVal;
+      filterArtSelect.value = currentArtFilter;
+      filterToolSelect.value = currentToolFilter;
       
-      // 分類加載後刷新文章列表顯示 (因為需要類別名稱)
       renderArticleList();
+      renderToolList();
     });
 
     // 2. 監聽文章列表
@@ -114,20 +130,25 @@
       renderArticleList();
     });
 
-    // 渲染與排序邏輯
+    // 3. 監聽工具列表
+    const toolsCol = collection(db, 'artifacts', appId, 'public', 'data', 'tools');
+    onSnapshot(query(toolsCol, orderBy('createdAt', 'desc')), (snapshot) => {
+      allTools = [];
+      snapshot.forEach(record => {
+        allTools.push({ id: record.id, ...record.data() });
+      });
+      renderToolList();
+    });
+
+    // 渲染文章列表邏輯
     window.renderArticleList = function() {
       const list = document.getElementById('manage-articles-list');
       const filterCat = document.getElementById('filter-category').value;
       const sortType = document.getElementById('sort-articles').value;
 
       let filtered = [...allArticles];
+      if (filterCat !== 'all') filtered = filtered.filter(a => a.categoryId === filterCat);
 
-      // 篩選
-      if (filterCat !== 'all') {
-        filtered = filtered.filter(a => a.categoryId === filterCat);
-      }
-
-      // 排序
       filtered.sort((a, b) => {
         if (sortType === 'newest') return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
         if (sortType === 'title') return a.title.localeCompare(b.title, 'zh-Hant');
@@ -140,7 +161,6 @@
       });
 
       list.innerHTML = filtered.length ? "" : '<p class="text-center py-10 text-stone-400 text-sm">暫無匹配的文章</p>';
-      
       filtered.forEach(item => {
         const catName = allCategories[item.categoryId] || "未分類";
         list.innerHTML += `
@@ -161,28 +181,46 @@
       });
     };
 
-    // 3. 監聽工具列表
-    const toolsCol = collection(db, 'artifacts', appId, 'public', 'data', 'tools');
-    onSnapshot(query(toolsCol, orderBy('createdAt', 'desc')), (snapshot) => {
+    // 渲染工具列表邏輯 (新增分類顯示與排序)
+    window.renderToolList = function() {
       const list = document.getElementById('manage-tools-list');
-      list.innerHTML = "";
-      snapshot.forEach(record => {
-        const item = record.data();
-        const id = record.id;
+      const filterCat = document.getElementById('filter-tool-category').value;
+      const sortType = document.getElementById('sort-tools').value;
+
+      let filtered = [...allTools];
+      if (filterCat !== 'all') filtered = filtered.filter(t => t.categoryId === filterCat);
+
+      filtered.sort((a, b) => {
+        if (sortType === 'newest') return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+        if (sortType === 'name') return a.name.localeCompare(b.name, 'zh-Hant');
+        if (sortType === 'category') {
+          const nameA = allCategories[a.categoryId] || "";
+          const nameB = allCategories[b.categoryId] || "";
+          return nameA.localeCompare(nameB, 'zh-Hant');
+        }
+        return 0;
+      });
+
+      list.innerHTML = filtered.length ? "" : '<p class="text-center py-10 text-stone-400 text-sm">暫無匹配的工具</p>';
+      filtered.forEach(item => {
+        const catName = allCategories[item.categoryId] || "未分類";
         list.innerHTML += `
-          <div class="border-b py-4 flex justify-between items-center">
+          <div class="border-b py-4 flex justify-between items-center group">
             <div class="truncate pr-4">
-              <p class="font-bold text-stone-700">${item.name}</p>
-              <p class="text-xs text-stone-400">${item.link}</p>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2 py-0.5 bg-amber-50 text-amber-600 text-[10px] rounded font-bold">${catName}</span>
+                <p class="font-bold text-stone-700 truncate">${item.name}</p>
+              </div>
+              <p class="text-xs text-stone-400 truncate">${item.link}</p>
             </div>
             <div class="flex gap-3 shrink-0">
-              <button onclick="editItem('tools', '${id}', '${btoa(encodeURIComponent(JSON.stringify(item)))}')" class="text-amber-600 text-sm font-bold hover:underline">修改</button>
-              <button onclick="deleteItem('tools', '${id}')" class="text-red-300 text-sm hover:text-red-600 transition">刪除</button>
+              <button onclick="editItem('tools', '${item.id}', '${btoa(encodeURIComponent(JSON.stringify(item)))}')" class="text-amber-600 text-sm font-bold hover:underline">修改</button>
+              <button onclick="deleteItem('tools', '${item.id}')" class="text-red-300 text-sm hover:text-red-600 transition">刪除</button>
             </div>
           </div>
         `;
       });
-    });
+    };
 
     window.db = db;
     window.appId = appId;
@@ -204,24 +242,15 @@
     .btn-primary { background: var(--accent-brown); color: white; padding: 12px 24px; border-radius: 12px; font-weight: bold; transition: 0.3s; }
     .btn-ai { background: #fdf2f8; color: #db2777; border: 1px solid #fbcfe8; padding: 10px 16px; border-radius: 10px; font-weight: bold; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
     
-    .nav-tab { padding: 12px 20px; border-radius: 12px 12px 0 0; cursor: pointer; font-weight: bold; opacity: 0.6; }
+    .nav-tab { padding: 12px 20px; border-radius: 12px 12px 0 0; cursor: pointer; font-weight: bold; opacity: 0.6; transition: 0.2s; }
     .nav-tab.active { background: white; opacity: 1; color: var(--accent-brown); box-shadow: 0 -5px 10px rgba(0,0,0,0.02); }
 
     #editor-container { height: 350px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
     .ql-toolbar.ql-snow { border-top-left-radius: 12px; border-top-right-radius: 12px; background: #fcfcfc; }
 
-    #lock-screen {
-      position: fixed; inset: 0; background: var(--primary-yellow);
-      z-index: 10000; display: flex; align-items: center; justify-content: center;
-      transition: 0.5s;
-    }
-    .lock-box { background: white; padding: 40px; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; max-width: 320px; width: 90%; }
-    
-    /* 修正空白與隱藏顯示邏輯 */
-    .section-content { display: none; transform: translateY(10px); opacity: 0; transition: 0.3s; }
-    .section-content.active { display: grid; transform: translateY(0); opacity: 1; }
+    .section-content { display: none; opacity: 0; }
+    .section-content.active { display: grid; opacity: 1; }
 
-    /* AI 抽屜樣式 */
     #ai-drawer {
       position: fixed; top: 0; right: -400px; width: 380px; height: 100%;
       background: white; box-shadow: -10px 0 30px rgba(0,0,0,0.1);
@@ -229,15 +258,21 @@
       display: flex; flex-direction: column;
     }
     #ai-drawer.open { right: 0; }
+
+    #lock-screen {
+      position: fixed; inset: 0; background: var(--primary-yellow);
+      z-index: 10000; display: flex; align-items: center; justify-content: center;
+    }
+    .lock-box { background: white; padding: 40px; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; max-width: 320px; width: 90%; }
   </style>
 </head>
 <body class="p-4 md:p-10">
 
-  <!-- 密碼鎖 (省略細節保持代碼精簡) -->
+  <!-- 密碼鎖 -->
   <div id="lock-screen">
     <div class="lock-box">
       <div class="w-16 h-16 bg-amber-100 rounded-2xl mx-auto mb-6 flex items-center justify-center text-3xl">🗄️</div>
-      <h2 class="text-xl font-bold mb-2">營運中樞安全檢查</h2>
+      <h2 class="text-xl font-bold mb-2 text-stone-800">營運中樞安全檢查</h2>
       <p class="text-sm text-stone-400 mb-6">請輸入管理員密碼以繼續</p>
       <input type="password" id="admin-password" placeholder="輸入密碼" class="w-full p-3 border rounded-xl text-center mb-4 tracking-widest outline-none focus:ring-2 focus:ring-amber-200">
       <button onclick="checkPassword()" class="btn-primary w-full">進入後台</button>
@@ -262,8 +297,7 @@
     </div>
   </div>
 
-  <!-- 主管理內容 -->
-  <div id="main-content-wrapper" class="hidden transition-all duration-700">
+  <div id="main-content-wrapper" class="hidden">
     <header class="max-w-6xl mx-auto mb-6 flex justify-between items-end">
       <div>
         <h1 class="text-3xl font-black text-stone-700 tracking-tight">小豆腐營運中樞 🛠️</h1>
@@ -275,7 +309,6 @@
       </div>
     </header>
 
-    <!-- 導覽頁籤 -->
     <div class="max-w-6xl mx-auto flex gap-1">
       <div onclick="switchSection('write')" id="tab-write" class="nav-tab active">內容創作</div>
       <div onclick="switchSection('category')" id="tab-category" class="nav-tab">分類管理</div>
@@ -284,7 +317,7 @@
 
     <main class="max-w-6xl mx-auto">
       
-      <!-- 內容創作區塊 -->
+      <!-- 內容創作 -->
       <div id="section-write" class="section-content active grid-cols-1 lg:grid-cols-12 gap-8">
         <div class="lg:col-span-7">
           <section class="card">
@@ -294,7 +327,7 @@
               <div class="grid grid-cols-2 gap-4">
                 <div class="col-span-2 md:col-span-1">
                   <label class="block text-sm font-bold mb-1 text-stone-500">文章標題</label>
-                  <input type="text" id="main-title" placeholder="例如：114年報稅重點" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200">
+                  <input type="text" id="main-title" placeholder="標題" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200">
                 </div>
                 <div class="col-span-2 md:col-span-1">
                   <label class="block text-sm font-bold mb-1 text-stone-500">所屬分類</label>
@@ -303,24 +336,16 @@
                   </select>
                 </div>
               </div>
-              <div>
-                <label class="block text-sm font-bold mb-1 text-stone-500 text-right"><button onclick="toggleAIDrawer()" class="text-pink-500 hover:underline">✨ 使用 AI 潤飾</button></label>
-                <div id="editor-container"></div>
-              </div>
-              <button onclick="saveData()" id="save-btn" class="btn-primary w-full shadow-lg shadow-stone-200 py-4 text-lg">確認儲存並發佈</button>
+              <div id="editor-container"></div>
+              <button onclick="saveData()" id="save-btn" class="btn-primary w-full py-4 text-lg">確認儲存並發佈</button>
             </div>
           </section>
         </div>
         <div class="lg:col-span-5">
           <section class="card h-full flex flex-col">
-            <div class="flex justify-between items-center mb-4 border-b pb-2">
-              <h2 class="text-lg font-bold">📘 文章列表</h2>
-            </div>
-            <!-- 篩選與排序工具列 -->
+            <h2 class="text-lg font-bold mb-4 border-b pb-2 text-stone-700">📘 文章列表</h2>
             <div class="grid grid-cols-2 gap-2 mb-4">
-              <select id="filter-category" onchange="renderArticleList()" class="text-xs p-2 border rounded-lg bg-stone-50 outline-none">
-                <option value="all">所有分類</option>
-              </select>
+              <select id="filter-category" onchange="renderArticleList()" class="text-xs p-2 border rounded-lg bg-stone-50 outline-none"></select>
               <select id="sort-articles" onchange="renderArticleList()" class="text-xs p-2 border rounded-lg bg-stone-50 outline-none">
                 <option value="newest">最新發佈</option>
                 <option value="category">依分類排序</option>
@@ -332,21 +357,15 @@
         </div>
       </div>
 
-      <!-- 分類管理區塊 -->
+      <!-- 分類管理 -->
       <div id="section-category" class="section-content grid-cols-1 lg:grid-cols-12 gap-8">
         <div class="lg:col-span-5">
           <section class="card">
-            <h2 class="text-xl font-bold mb-6">🏷️ 分類管理</h2>
+            <h2 class="text-xl font-bold mb-6 text-stone-800">🏷️ 分類管理</h2>
             <div class="space-y-4">
               <input type="hidden" id="cat-edit-id">
-              <div>
-                <label class="block text-sm font-bold mb-1">分類名稱</label>
-                <input type="text" id="cat-name" placeholder="如：營業稅" class="w-full p-3 border rounded-xl">
-              </div>
-              <div>
-                <label class="block text-sm font-bold mb-1">排序權重 (數字大在前)</label>
-                <input type="number" id="cat-weight" placeholder="0" class="w-full p-3 border rounded-xl">
-              </div>
+              <input type="text" id="cat-name" placeholder="分類名稱" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200">
+              <input type="number" id="cat-weight" placeholder="排序權重 (數字大在前)" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200">
               <div class="flex gap-2">
                 <button onclick="saveCategory()" id="cat-save-btn" class="btn-primary flex-1">儲存分類</button>
                 <button onclick="resetCategoryForm()" class="bg-stone-100 px-4 rounded-xl text-stone-500">取消</button>
@@ -356,29 +375,53 @@
         </div>
         <div class="lg:col-span-7">
           <section class="card">
-            <h2 class="text-lg font-bold mb-4 border-b pb-2">目前的分類 (依權重)</h2>
+            <h2 class="text-lg font-bold mb-4 border-b pb-2 text-stone-700">目前的分類 (依權重)</h2>
             <div id="manage-categories-list" class="divide-y"></div>
           </section>
         </div>
       </div>
 
-      <!-- 工具管理區塊 -->
+      <!-- 工具維護 (新增分類排序功能) -->
       <div id="section-tools-manage" class="section-content grid-cols-1 lg:grid-cols-12 gap-8">
         <div class="lg:col-span-5">
           <section class="card">
-            <h2 class="text-xl font-bold mb-6">🧮 工具與連結</h2>
+            <h2 class="text-xl font-bold mb-6 text-stone-800">🧮 工具與連結維護</h2>
             <div class="space-y-4">
-              <input type="text" id="tool-name" placeholder="工具名稱" class="w-full p-3 border rounded-xl">
-              <input type="text" id="tool-link" placeholder="網址 (https://...)" class="w-full p-3 border rounded-xl">
-              <textarea id="tool-desc" placeholder="簡短描述" class="w-full p-3 border rounded-xl h-24"></textarea>
-              <button onclick="saveTool()" class="btn-primary w-full">發佈工具</button>
+              <input type="hidden" id="tool-edit-id">
+              <div class="grid grid-cols-1 gap-4">
+                <div>
+                  <label class="block text-sm font-bold mb-1 text-stone-500">工具名稱</label>
+                  <input type="text" id="tool-name" placeholder="如：綜合所得稅試算" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200">
+                </div>
+                <div>
+                  <label class="block text-sm font-bold mb-1 text-stone-500">所屬分類</label>
+                  <select id="tool-category" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200 bg-white"></select>
+                </div>
+                <div>
+                  <label class="block text-sm font-bold mb-1 text-stone-500">網址</label>
+                  <input type="text" id="tool-link" placeholder="https://..." class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200">
+                </div>
+                <div>
+                  <label class="block text-sm font-bold mb-1 text-stone-500">簡短描述</label>
+                  <textarea id="tool-desc" placeholder="簡單說明這個工具的用途" class="w-full p-3 border rounded-xl h-24 outline-none focus:ring-2 focus:ring-amber-200"></textarea>
+                </div>
+              </div>
+              <button onclick="saveTool()" id="tool-save-btn" class="btn-primary w-full">確認發佈工具</button>
             </div>
           </section>
         </div>
         <div class="lg:col-span-7">
-          <section class="card">
-            <h2 class="text-lg font-bold mb-4 border-b pb-2">現有工具列表</h2>
-            <div id="manage-tools-list" class="divide-y"></div>
+          <section class="card h-full flex flex-col">
+            <h2 class="text-lg font-bold mb-4 border-b pb-2 text-stone-700">🛠️ 現有工具列表</h2>
+            <div class="grid grid-cols-2 gap-2 mb-4">
+              <select id="filter-tool-category" onchange="renderToolList()" class="text-xs p-2 border rounded-lg bg-stone-50 outline-none"></select>
+              <select id="sort-tools" onchange="renderToolList()" class="text-xs p-2 border rounded-lg bg-stone-50 outline-none">
+                <option value="newest">最新新增</option>
+                <option value="category">依分類排序</option>
+                <option value="name">依名稱排序</option>
+              </select>
+            </div>
+            <div id="manage-tools-list" class="divide-y divide-stone-100 flex-1 overflow-y-auto pr-2 min-h-[400px]"></div>
           </section>
         </div>
       </div>
@@ -388,9 +431,8 @@
 
   <script>
     const correctPassword = "8888"; 
-    const apiKey = ""; // Gemini API Key
+    const apiKey = ""; 
 
-    // --- 頁籤切換 ---
     function switchSection(id) {
       ['write', 'category', 'tools-manage'].forEach(s => {
         document.getElementById(`section-${s}`).classList.remove('active');
@@ -400,19 +442,15 @@
       document.getElementById(`tab-${id}`).classList.add('active');
     }
 
-    // --- 分類操作 ---
+    // 分類操作
     async function saveCategory() {
       const name = document.getElementById('cat-name').value;
       const weight = parseInt(document.getElementById('cat-weight').value) || 0;
       const id = document.getElementById('cat-edit-id').value;
       if(!name) return alert("請填寫分類名稱");
-
       try {
-        if(id) {
-          await window.updateDoc(window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'categories', id), { name, weight });
-        } else {
-          await window.addDoc(window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'categories'), { name, weight, createdAt: window.serverTimestamp() });
-        }
+        if(id) await window.updateDoc(window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'categories', id), { name, weight });
+        else await window.addDoc(window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'categories'), { name, weight, createdAt: window.serverTimestamp() });
         resetCategoryForm();
       } catch (e) { alert("操作失敗"); }
     }
@@ -432,77 +470,35 @@
       document.getElementById('cat-save-btn').innerText = "儲存分類";
     }
 
-    // --- AI 功能 (保持原樣) ---
-    async function callGemini(prompt, systemPrompt) {
-      const resultEl = document.getElementById('ai-result');
-      resultEl.innerHTML = `<div class="animate-pulse text-pink-400 italic text-center py-4">✨ 小豆腐 AI 正在思考中...</div>`;
+    // 工具操作
+    async function saveTool() {
+      const id = document.getElementById('tool-edit-id').value;
+      const name = document.getElementById('tool-name').value;
+      const categoryId = document.getElementById('tool-category').value;
+      const link = document.getElementById('tool-link').value;
+      const description = document.getElementById('tool-desc').value;
+      if(!name || !link || !categoryId) return alert("請填寫完整內容（含分類）");
+      
+      const btn = document.getElementById('tool-save-btn');
+      btn.disabled = true;
       try {
-        let retries = 0;
-        const delays = [1000, 2000, 4000];
-        while (retries < 3) {
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              systemInstruction: { parts: [{ text: systemPrompt }] }
-            })
-          });
-          if (response.ok) {
-            const data = await response.json();
-            return data.candidates?.[0]?.content?.parts?.[0]?.text;
-          }
-          await new Promise(r => setTimeout(r, delays[retries++]));
-        }
-        return "連線失敗。";
-      } catch (e) { return "錯誤。"; }
+        if(id) await window.updateDoc(window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'tools', id), { name, categoryId, link, description });
+        else await window.addDoc(window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'tools'), { name, categoryId, link, description, createdAt: window.serverTimestamp() });
+        alert("工具已儲存！");
+        resetToolForm();
+      } catch (e) { alert("錯誤"); } finally { btn.disabled = false; }
     }
 
-    async function callAIFeature(mode) {
-      if (!document.getElementById('ai-drawer').classList.contains('open')) toggleAIDrawer();
-      const content = window.quill.getText().trim();
-      if (!content) return document.getElementById('ai-result').innerText = "請先輸入內容。";
-      let systemPrompt = "你是一位極致精簡的稅務編輯，擅長白話文。";
-      let prompt = "";
-      switch(mode) {
-        case 'polish': prompt = `潤飾為白話文：\n${content}`; break;
-        case 'summarize': prompt = `摘要成 3 個重點：\n${content}`; break;
-        case 'image-idea': prompt = `建議 2 個配圖概念：\n${content}`; break;
-      }
-      const res = await callGemini(prompt, systemPrompt);
-      document.getElementById('ai-result').innerText = res;
+    function resetToolForm() {
+      document.getElementById('tool-edit-id').value = "";
+      document.getElementById('tool-name').value = "";
+      document.getElementById('tool-category').value = "";
+      document.getElementById('tool-link').value = "";
+      document.getElementById('tool-desc').value = "";
+      document.getElementById('tool-save-btn').innerText = "確認發佈工具";
     }
 
-    function toggleAIDrawer() { document.getElementById('ai-drawer').classList.toggle('open'); }
-    function copyAIResult() {
-      const text = document.getElementById('ai-result').innerText;
-      navigator.clipboard.writeText(text);
-      alert("已複製！");
-    }
-
-    // --- 登入控制 ---
-    function checkPassword() {
-      if (document.getElementById('admin-password').value === correctPassword) { unlock(); } 
-      else { document.getElementById('error-msg').classList.remove('hidden'); }
-    }
-
-    function unlock() {
-      document.getElementById('lock-screen').style.opacity = "0";
-      setTimeout(() => {
-        document.getElementById('lock-screen').style.display = "none";
-        document.getElementById('main-content-wrapper').classList.replace('hidden', 'visible-content');
-        sessionStorage.setItem('isLoggedIn', 'true');
-      }, 500);
-    }
-
-    function logout() { sessionStorage.removeItem('isLoggedIn'); window.location.reload(); }
-
-    window.onload = () => {
-      if (sessionStorage.getItem('isLoggedIn') === 'true') unlock();
-      document.getElementById('admin-password').addEventListener('keypress', (e) => { if (e.key === 'Enter') checkPassword(); });
-    };
-
-    // --- 資料儲存 ---
+    // 文章保存
     async function saveData() {
       const id = document.getElementById('edit-id').value;
       const title = document.getElementById('main-title').value;
@@ -511,41 +507,33 @@
       if(!title || !categoryId || window.quill.getText().trim() === "") return alert("請填寫完整內容");
 
       const btn = document.getElementById('save-btn');
-      btn.disabled = true; btn.innerText = "同步中...";
+      btn.disabled = true;
       try {
-        if(id) {
-          await window.updateDoc(window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'articles', id), { title, categoryId, content });
-        } else {
-          await window.addDoc(window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'articles'), { title, categoryId, content, createdAt: window.serverTimestamp() });
-        }
+        if(id) await window.updateDoc(window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'articles', id), { title, categoryId, content });
+        else await window.addDoc(window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'articles'), { title, categoryId, content, createdAt: window.serverTimestamp() });
         alert("文章已儲存！");
         resetForm();
-      } catch (e) { alert("儲存失敗"); } finally { btn.disabled = false; btn.innerText = "確認儲存並發佈"; }
-    }
-
-    async function saveTool() {
-      const name = document.getElementById('tool-name').value;
-      const link = document.getElementById('tool-link').value;
-      const description = document.getElementById('tool-desc').value;
-      if(!name || !link) return alert("名稱與網址為必填");
-      try {
-        await window.addDoc(window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'tools'), { name, link, description, createdAt: window.serverTimestamp() });
-        alert("工具已新增");
-        document.getElementById('tool-name').value = "";
-        document.getElementById('tool-link').value = "";
-        document.getElementById('tool-desc').value = "";
-      } catch (e) { alert("錯誤"); }
+      } catch (e) { alert("儲存失敗"); } finally { btn.disabled = false; }
     }
 
     window.editItem = function(type, id, encodedData) {
-      if(type !== 'articles') return alert("目前僅支援修改部落格文章");
       const data = JSON.parse(decodeURIComponent(atob(encodedData)));
-      document.getElementById('edit-id').value = id;
-      document.getElementById('main-title').value = data.title;
-      document.getElementById('main-category').value = data.categoryId || "";
-      window.quill.root.innerHTML = data.content;
-      document.getElementById('form-title').innerText = "修改文章內容";
-      switchSection('write');
+      if(type === 'articles') {
+        document.getElementById('edit-id').value = id;
+        document.getElementById('main-title').value = data.title;
+        document.getElementById('main-category').value = data.categoryId || "";
+        window.quill.root.innerHTML = data.content;
+        document.getElementById('form-title').innerText = "修改文章內容";
+        switchSection('write');
+      } else if (type === 'tools') {
+        document.getElementById('tool-edit-id').value = id;
+        document.getElementById('tool-name').value = data.name;
+        document.getElementById('tool-category').value = data.categoryId || "";
+        document.getElementById('tool-link').value = data.link;
+        document.getElementById('tool-desc').value = data.description || "";
+        document.getElementById('tool-save-btn').innerText = "更新工具資訊";
+        switchSection('tools-manage');
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -561,6 +549,21 @@
       window.quill.setContents([]);
       document.getElementById('form-title').innerText = "撰寫部落格文章";
     }
+
+    // AI & 其他 (密碼鎖、登出等)
+    function toggleAIDrawer() { document.getElementById('ai-drawer').classList.toggle('open'); }
+    function checkPassword() {
+      if (document.getElementById('admin-password').value === correctPassword) unlock(); 
+      else document.getElementById('error-msg').classList.remove('hidden');
+    }
+    function unlock() {
+      document.getElementById('lock-screen').style.display = "none";
+      document.getElementById('main-content-wrapper').classList.replace('hidden', 'block');
+      sessionStorage.setItem('isLoggedIn', 'true');
+    }
+    function logout() { sessionStorage.removeItem('isLoggedIn'); window.location.reload(); }
+    window.onload = () => { if (sessionStorage.getItem('isLoggedIn') === 'true') unlock(); };
+    document.getElementById('admin-password')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') checkPassword(); });
   </script>
 </body>
 </html>
