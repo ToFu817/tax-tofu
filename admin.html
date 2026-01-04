@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>小豆腐後台｜管理者系統</title>
+  <title>小豆腐後台｜進階編輯系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Quill 編輯器樣式 -->
+  <!-- Quill 編輯器樣式與腳本 -->
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
   <!-- Lucide Icons -->
@@ -34,7 +34,10 @@
     .btn-primary { background: var(--accent); color: white; padding: 10px 20px; border-radius: 10px; font-weight: bold; transition: 0.3s; }
     .btn-primary:hover { filter: brightness(1.1); }
     
-    #editor-container { height: 400px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+    /* 編輯器容器高度與樣式微調 */
+    #editor-container { height: 500px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; font-size: 16px; background: white; }
+    .ql-editor table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    .ql-editor td { border: 1px solid #ccc; padding: 4px 8px; }
   </style>
 
   <script type="module">
@@ -60,17 +63,30 @@
     let allArticles = [];
     let allTools = [];
 
-    // 初始化 Quill
+    // 初始化 Quill 
+    // 注意：Quill 1.3.6 表格功能較不穩定，這裡先確保基礎工具列能運作且包含 Word 風格功能
     window.quill = new Quill('#editor-container', {
-      modules: { toolbar: [[{ 'header': [1, 2, 3, false] }], ['bold', 'italic', 'underline'], [{ 'color': [] }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['link', 'image', 'clean']] },
-      placeholder: '在這裡分享稅務小故事...',
+      modules: { 
+        toolbar: [
+          [{ 'header': [1, 2, 3, 4, false] }],
+          [{ 'size': ['small', false, 'large', 'huge'] }],  // 字體大小
+          ['bold', 'italic', 'underline', 'strike'],        // 樣式
+          [{ 'color': [] }, { 'background': [] }],          // 顏色
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],     // 列表
+          [{ 'align': [] }],                                // 對齊
+          ['link', 'image', 'video'],                       // 連結與多媒體
+          ['blockquote', 'code-block'],
+          ['clean']                                         // 清除格式
+        ] 
+      },
+      placeholder: '在這裡編寫您的稅務知識內容...',
       theme: 'snow'
     });
 
+    // 匿名登入
     signInAnonymously(auth).catch(err => console.error(err));
 
     // --- 數據監聽 ---
-    // 修改處：將 orderBy('weight', 'desc') 改為 'asc'，讓序號小排前面
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), orderBy('weight', 'asc')), (snap) => {
       allCategories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderCategoryCheckboxes();
@@ -88,19 +104,33 @@
       renderToolList();
     });
 
-    // --- 界面切換 ---
+    // --- 將函數掛載到 window 以供 HTML onclick 使用 ---
     window.switchTab = (tabId) => {
       document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
       const activeTab = document.querySelector(`[data-tab="${tabId}"]`);
       if(activeTab) activeTab.classList.add('active');
       document.querySelectorAll('.main-panel').forEach(el => el.classList.remove('active'));
-      document.getElementById(`panel-${tabId}`).classList.add('active');
+      const panel = document.getElementById(`panel-${tabId}`);
+      if(panel) panel.classList.add('active');
+    };
+
+    window.checkPassword = () => {
+      const pwInput = document.getElementById('pw');
+      if(pwInput.value === "8888") {
+        document.getElementById('gate').style.display = 'none';
+        document.getElementById('app').classList.remove('hidden');
+        lucide.createIcons();
+      } else {
+        alert("密碼錯誤");
+      }
     };
 
     // --- 渲染功能 ---
     function renderCategoryCheckboxes() {
       const artContainer = document.getElementById('art-cat-checks');
       const toolContainer = document.getElementById('tool-cat-checks');
+      if(!artContainer || !toolContainer) return;
+
       const html = allCategories.map(cat => `
         <label class="inline-flex items-center p-2 bg-stone-50 rounded-lg border border-stone-200 cursor-pointer hover:bg-amber-50">
           <input type="checkbox" value="${cat.id}" class="cat-checkbox mr-2">
@@ -114,13 +144,15 @@
     function renderFilterSelects() {
       const artFilter = document.getElementById('art-filter');
       const toolFilter = document.getElementById('tool-filter');
+      if(!artFilter || !toolFilter) return;
+
       const options = '<option value="all">所有標籤篩選</option>' + allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
       artFilter.innerHTML = options;
       toolFilter.innerHTML = options;
     }
 
     window.renderArticleList = () => {
-      const filter = document.getElementById('art-filter').value;
+      const filter = document.getElementById('art-filter')?.value || 'all';
       const filtered = filter === 'all' ? allArticles : allArticles.filter(a => (a.categoryIds || []).includes(filter));
       document.getElementById('art-list-container').innerHTML = filtered.map(a => `
         <div class="p-4 border-b flex justify-between items-center hover:bg-stone-50 transition">
@@ -137,7 +169,7 @@
     };
 
     window.renderToolList = () => {
-      const filter = document.getElementById('tool-filter').value;
+      const filter = document.getElementById('tool-filter')?.value || 'all';
       const filtered = filter === 'all' ? allTools : allTools.filter(t => (t.categoryIds || []).includes(filter));
       document.getElementById('tool-list-container').innerHTML = filtered.map(t => `
         <div class="p-4 border-b flex justify-between items-center hover:bg-stone-50 transition">
@@ -185,9 +217,11 @@
       if(!title || window.quill.getText().trim() === "") return alert("請填寫標題與內容");
       
       const data = { title, content, categoryIds: categoryIds.length ? categoryIds : ["general"], updatedAt: serverTimestamp() };
-      if(id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'articles', id), data);
-      else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'articles'), { ...data, createdAt: serverTimestamp() });
-      resetArticleForm(); alert("文章儲存成功！");
+      try {
+        if(id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'articles', id), data);
+        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'articles'), { ...data, createdAt: serverTimestamp() });
+        window.resetArticleForm(); alert("文章儲存成功！");
+      } catch (e) { alert("儲存失敗"); console.error(e); }
     }
 
     window.saveTool = async () => {
@@ -199,9 +233,11 @@
       if(!name || !link) return alert("請填寫名稱與網址");
       
       const data = { name, link, description, categoryIds: categoryIds.length ? categoryIds : ["general"], updatedAt: serverTimestamp() };
-      if(id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tools', id), data);
-      else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tools'), { ...data, createdAt: serverTimestamp() });
-      resetToolForm(); alert("工具儲存成功！");
+      try {
+        if(id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tools', id), data);
+        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tools'), { ...data, createdAt: serverTimestamp() });
+        window.resetToolForm(); alert("工具儲存成功！");
+      } catch (e) { alert("儲存失敗"); console.error(e); }
     }
 
     window.saveCategory = async () => {
@@ -209,15 +245,18 @@
       const name = document.getElementById('cat-name').value;
       const weight = parseInt(document.getElementById('cat-weight').value) || 0;
       if(!name) return;
-      if(id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id), { name, weight });
-      else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), { name, weight, createdAt: serverTimestamp() });
-      document.getElementById('cat-id').value = ""; document.getElementById('cat-name').value = ""; document.getElementById('cat-weight').value = 0;
-      alert("標籤設定已更新");
+      try {
+        if(id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id), { name, weight });
+        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), { name, weight, createdAt: serverTimestamp() });
+        document.getElementById('cat-id').value = ""; document.getElementById('cat-name').value = ""; document.getElementById('cat-weight').value = 0;
+        alert("標籤設定已更新");
+      } catch (e) { alert("儲存失敗"); console.error(e); }
     }
 
     // --- 編輯功能 ---
     window.editArticle = (id) => {
       const a = allArticles.find(x => x.id === id);
+      if(!a) return;
       document.getElementById('art-id').value = id;
       document.getElementById('art-title').value = a.title;
       window.quill.root.innerHTML = a.content;
@@ -228,6 +267,7 @@
 
     window.editTool = (id) => {
       const t = allTools.find(x => x.id === id);
+      if(!t) return;
       document.getElementById('tool-id').value = id;
       document.getElementById('tool-name').value = t.name;
       document.getElementById('tool-link').value = t.link;
@@ -262,13 +302,6 @@
       document.getElementById('tool-btn-text').innerText = "發佈工具";
     };
 
-    window.checkPassword = () => {
-      if(document.getElementById('pw').value === "8888") {
-        document.getElementById('gate').style.display='none';
-        document.getElementById('app').classList.remove('hidden');
-        lucide.createIcons();
-      }
-    };
   </script>
 </head>
 <body>
@@ -420,8 +453,9 @@
   </div>
 
   <script>
-    // 延遲啟動圖標，確保密碼登入後才加載
-    window.onload = () => { lucide.createIcons(); };
+    window.addEventListener('DOMContentLoaded', () => { 
+      lucide.createIcons(); 
+    });
   </script>
 </body>
 </html>
