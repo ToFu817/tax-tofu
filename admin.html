@@ -62,21 +62,21 @@
     let allCategories = [];
     let allArticles = [];
     let allTools = [];
+    let allForms = [];
 
     // 初始化 Quill 
-    // 注意：Quill 1.3.6 表格功能較不穩定，這裡先確保基礎工具列能運作且包含 Word 風格功能
     window.quill = new Quill('#editor-container', {
       modules: { 
         toolbar: [
           [{ 'header': [1, 2, 3, 4, false] }],
-          [{ 'size': ['small', false, 'large', 'huge'] }],  // 字體大小
-          ['bold', 'italic', 'underline', 'strike'],        // 樣式
-          [{ 'color': [] }, { 'background': [] }],          // 顏色
-          [{ 'list': 'ordered'}, { 'list': 'bullet' }],     // 列表
-          [{ 'align': [] }],                                // 對齊
-          ['link', 'image', 'video'],                       // 連結與多媒體
+          [{ 'size': ['small', false, 'large', 'huge'] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ 'color': [] }, { 'background': [] }],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          [{ 'align': [] }],
+          ['link', 'image', 'video'],
           ['blockquote', 'code-block'],
-          ['clean']                                         // 清除格式
+          ['clean']
         ] 
       },
       placeholder: '在這裡編寫您的稅務知識內容...',
@@ -104,6 +104,12 @@
       renderToolList();
     });
 
+    // 監聽表單數據 (依名稱排序)
+    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'forms'), orderBy('name', 'asc')), (snap) => {
+      allForms = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderFormList();
+    });
+
     // --- 將函數掛載到 window 以供 HTML onclick 使用 ---
     window.switchTab = (tabId) => {
       document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
@@ -129,7 +135,8 @@
     function renderCategoryCheckboxes() {
       const artContainer = document.getElementById('art-cat-checks');
       const toolContainer = document.getElementById('tool-cat-checks');
-      if(!artContainer || !toolContainer) return;
+      const formContainer = document.getElementById('form-cat-checks');
+      if(!artContainer || !toolContainer || !formContainer) return;
 
       const html = allCategories.map(cat => `
         <label class="inline-flex items-center p-2 bg-stone-50 rounded-lg border border-stone-200 cursor-pointer hover:bg-amber-50">
@@ -139,16 +146,19 @@
       `).join('');
       artContainer.innerHTML = html;
       toolContainer.innerHTML = html;
+      formContainer.innerHTML = html;
     }
 
     function renderFilterSelects() {
       const artFilter = document.getElementById('art-filter');
       const toolFilter = document.getElementById('tool-filter');
-      if(!artFilter || !toolFilter) return;
+      const formFilter = document.getElementById('form-filter');
+      if(!artFilter || !toolFilter || !formFilter) return;
 
       const options = '<option value="all">所有標籤篩選</option>' + allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
       artFilter.innerHTML = options;
       toolFilter.innerHTML = options;
+      formFilter.innerHTML = options;
     }
 
     window.renderArticleList = () => {
@@ -180,6 +190,23 @@
           <div class="flex gap-4 shrink-0">
             <button onclick="editTool('${t.id}')" class="text-amber-600 font-bold text-sm">修改</button>
             <button onclick="deleteItem('tools', '${t.id}')" class="text-red-300 text-sm">刪除</button>
+          </div>
+        </div>
+      `).join('');
+    };
+
+    window.renderFormList = () => {
+      const filter = document.getElementById('form-filter')?.value || 'all';
+      const filtered = filter === 'all' ? allForms : allForms.filter(f => (f.categoryIds || []).includes(filter));
+      document.getElementById('form-list-container').innerHTML = filtered.map(f => `
+        <div class="p-4 border-b flex justify-between items-center hover:bg-stone-50 transition">
+          <div class="truncate pr-4">
+            <div class="flex gap-1 mb-1">${getBadges(f.categoryIds)}</div>
+            <p class="font-bold text-stone-700 truncate">${f.name}</p>
+          </div>
+          <div class="flex gap-4 shrink-0">
+            <button onclick="editForm('${f.id}')" class="text-amber-600 font-bold text-sm">修改</button>
+            <button onclick="deleteItem('forms', '${f.id}')" class="text-red-300 text-sm">刪除</button>
           </div>
         </div>
       `).join('');
@@ -240,6 +267,22 @@
       } catch (e) { alert("儲存失敗"); console.error(e); }
     }
 
+    window.saveForm = async () => {
+      const id = document.getElementById('form-id').value;
+      const name = document.getElementById('form-name').value;
+      const link = document.getElementById('form-link').value;
+      const description = document.getElementById('form-desc').value;
+      const categoryIds = Array.from(document.querySelectorAll('#form-cat-checks input:checked')).map(el => el.value);
+      if(!name || !link) return alert("請填寫表單名稱與網址");
+      
+      const data = { name, link, description, categoryIds: categoryIds.length ? categoryIds : ["general"], updatedAt: serverTimestamp() };
+      try {
+        if(id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'forms', id), data);
+        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'forms'), { ...data, createdAt: serverTimestamp() });
+        window.resetFormForm(); alert("常用表單儲存成功！");
+      } catch (e) { alert("儲存失敗"); console.error(e); }
+    }
+
     window.saveCategory = async () => {
       const id = document.getElementById('cat-id').value;
       const name = document.getElementById('cat-name').value;
@@ -277,6 +320,18 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    window.editForm = (id) => {
+      const f = allForms.find(x => x.id === id);
+      if(!f) return;
+      document.getElementById('form-id').value = id;
+      document.getElementById('form-name').value = f.name;
+      document.getElementById('form-link').value = f.link;
+      document.getElementById('form-desc').value = f.description;
+      document.querySelectorAll('#form-cat-checks input').forEach(el => el.checked = (f.categoryIds || []).includes(el.value));
+      document.getElementById('form-btn-text').innerText = "更新表單";
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     window.prepareEditCat = (id, name, weight) => {
       document.getElementById('cat-id').value = id;
       document.getElementById('cat-name').value = name;
@@ -300,6 +355,13 @@
       document.getElementById('tool-link').value = ""; document.getElementById('tool-desc').value = "";
       document.querySelectorAll('#tool-cat-checks input').forEach(el => el.checked = false);
       document.getElementById('tool-btn-text').innerText = "發佈工具";
+    };
+
+    window.resetFormForm = () => {
+      document.getElementById('form-id').value = ""; document.getElementById('form-name').value = "";
+      document.getElementById('form-link').value = ""; document.getElementById('form-desc').value = "";
+      document.querySelectorAll('#form-cat-checks input').forEach(el => el.checked = false);
+      document.getElementById('form-btn-text').innerText = "發佈表單";
     };
 
   </script>
@@ -333,6 +395,9 @@
         </div>
         <div onclick="switchTab('tools')" data-tab="tools" class="sidebar-link">
           <i data-lucide="wrench" size="18"></i> 稅務小工具管理
+        </div>
+        <div onclick="switchTab('forms')" data-tab="forms" class="sidebar-link">
+          <i data-lucide="file-text" size="18"></i> 常用表單管理
         </div>
         <div onclick="switchTab('tags')" data-tab="tags" class="sidebar-link">
           <i data-lucide="tags" size="18"></i> 標籤系統維護
@@ -416,6 +481,42 @@
                 <select id="tool-filter" onchange="renderToolList()" class="text-xs p-1.5 border rounded-lg"></select>
               </div>
               <div id="tool-list-container" class="space-y-1 flex-1 overflow-y-auto"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 常用表單管理面板 -->
+      <section id="panel-forms" class="main-panel">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+          <div class="xl:col-span-7">
+            <div class="card p-8">
+              <h2 class="text-2xl font-black mb-6">管理常用表單</h2>
+              <input type="hidden" id="form-id">
+              <div class="space-y-6">
+                <input type="text" id="form-name" class="input-field" placeholder="表單名稱 (如：綜所稅更正申請書)">
+                <input type="text" id="form-link" class="input-field" placeholder="下載或連結網址 (https://...)">
+                <textarea id="form-desc" class="input-field h-24" placeholder="表單用途說明..."></textarea>
+                
+                <div>
+                  <label class="block text-xs font-bold text-stone-400 mb-2 uppercase tracking-widest">分類標籤</label>
+                  <div id="form-cat-checks" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <div class="flex gap-4">
+                  <button onclick="saveForm()" class="btn-primary flex-1"><span id="form-btn-text">發佈表單</span></button>
+                  <button onclick="resetFormForm()" class="text-stone-400 text-sm">重設表單</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="xl:col-span-5">
+            <div class="card p-6 h-full flex flex-col">
+              <div class="flex justify-between items-center mb-6">
+                <h3 class="font-black text-lg">表單清單 (名稱排序)</h3>
+                <select id="form-filter" onchange="renderFormList()" class="text-xs p-1.5 border rounded-lg"></select>
+              </div>
+              <div id="form-list-container" class="space-y-1 flex-1 overflow-y-auto"></div>
             </div>
           </div>
         </div>
