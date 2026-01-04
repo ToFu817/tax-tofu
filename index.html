@@ -171,27 +171,38 @@
     window.state = {
       articles: [],
       tools: [],
+      forms: [],
       categories: [],
       currentArticleCat: 'all',
-      currentToolCat: 'all'
+      currentToolCat: 'all',
+      currentFormCat: 'all'
     };
 
     // --- 資料監聽 ---
-    // 修改處：orderBy('weight', 'asc')，讓序號小排前面
+    // 分類排序保持權重排序
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), orderBy('weight', 'asc')), (snap) => {
       window.state.categories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderFilters('article-filters', 'currentArticleCat', 'filterArticle');
       renderFilters('tool-filters', 'currentToolCat', 'filterTool');
+      renderFilters('form-filters', 'currentFormCat', 'filterForm');
     });
 
-    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'articles'), orderBy('createdAt', 'desc')), (snap) => {
+    // 文章排序：改為標題 (title) 文字排序
+    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'articles'), orderBy('title', 'asc')), (snap) => {
       window.state.articles = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderArticles();
     });
 
-    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'tools'), orderBy('createdAt', 'desc')), (snap) => {
+    // 小工具排序：改為名稱 (name) 文字排序
+    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'tools'), orderBy('name', 'asc')), (snap) => {
       window.state.tools = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderTools();
+    });
+
+    // 常用表單排序：名稱 (name) 文字排序
+    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'forms'), orderBy('name', 'asc')), (snap) => {
+      window.state.forms = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderForms();
     });
 
     // --- 渲染功能 ---
@@ -216,6 +227,12 @@
       window.state.currentToolCat = id;
       renderFilters('tool-filters', 'currentToolCat', 'filterTool');
       renderTools();
+    };
+
+    window.filterForm = (id) => {
+      window.state.currentFormCat = id;
+      renderFilters('form-filters', 'currentFormCat', 'filterForm');
+      renderForms();
     };
 
     function renderArticles() {
@@ -273,7 +290,37 @@
           </div>
         </a>
       `).join('');
-      lucide.createIcons(); // 重新渲染圖示
+      lucide.createIcons();
+    }
+
+    function renderForms() {
+      const container = document.getElementById('forms-list');
+      if (!container) return;
+
+      const filtered = window.state.currentFormCat === 'all' 
+        ? window.state.forms 
+        : window.state.forms.filter(t => (t.categoryIds || [t.categoryId]).includes(window.state.currentFormCat));
+      
+      if(filtered.length === 0) {
+        container.innerHTML = `<div class="text-center py-20 text-stone-300 col-span-full">目前尚無相關表單</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(data => `
+        <a href="${data.link}" target="_blank" class="card block">
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="text-[10px] font-bold text-accent/50 uppercase tracking-widest mb-2 block">${getCategoryName(data.categoryId || (data.categoryIds ? data.categoryIds[0] : ""))}</span>
+              <h3 class="font-bold text-lg text-stone-700 mb-2">${data.name}</h3>
+              <p class="text-xs text-stone-400 line-clamp-1">${data.description || ''}</p>
+            </div>
+            <div class="text-stone-200 mt-1">
+              <i data-lucide="file-text" size="18"></i>
+            </div>
+          </div>
+        </a>
+      `).join('');
+      lucide.createIcons();
     }
 
     function getCategoryName(id) { return window.state.categories.find(c => c.id === id)?.name || "一般"; }
@@ -309,9 +356,9 @@
     <p class="text-stone-400 text-lg font-light tracking-widest italic">讓稅務，像是切一塊豆腐一樣簡單</p>
   </header>
 
-  <main class="max-w-5xl mx-auto px-6 py-10">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <!-- 稅務新知：修改圖示為 pen-tool -->
+  <main class="max-w-6xl mx-auto px-6 py-10">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <!-- 稅務新知 -->
       <div class="card text-center cursor-pointer group" onclick="showPage('page-articles')">
         <div class="icon-circle">
           <i data-lucide="pen-tool" size="32" stroke-width="1.5"></i>
@@ -329,13 +376,22 @@
         <p class="text-xs text-stone-400 mt-3 font-medium tracking-wider">實用連結與快速試算</p>
       </div>
 
+      <!-- 常用表單及查詢 -->
+      <div class="card text-center cursor-pointer group" onclick="showPage('page-forms')">
+        <div class="icon-circle">
+          <i data-lucide="file-search" size="32" stroke-width="1.5"></i>
+        </div>
+        <h2 class="text-xl font-bold text-stone-700">常用表單及查詢</h2>
+        <p class="text-xs text-stone-400 mt-3 font-medium tracking-wider">表格下載與相關查詢</p>
+      </div>
+
       <!-- 預約諮詢 -->
       <a href="https://lin.ee/98FMxAk" target="_blank" class="card text-center block group">
         <div class="icon-circle">
           <i data-lucide="message-circle" size="32" stroke-width="1.5"></i>
         </div>
         <h2 class="text-xl font-bold text-stone-700">預約諮詢</h2>
-        <p class="text-xs text-stone-400 mt-3 font-medium tracking-wider">專業顧問一對一服務</p>
+        <p class="text-xs text-stone-400 mt-3 font-medium tracking-wider">由稅務小豆腐為您服務</p>
       </a>
     </div>
   </main>
@@ -346,12 +402,10 @@
       <button onclick="closePage('page-articles')" class="mb-10 text-stone-400 hover:text-stone-800 flex items-center gap-2 font-bold transition text-sm">
         <i data-lucide="arrow-left" size="16"></i> 返回首頁
       </button>
-      
       <div class="mb-12 px-4">
         <h2 class="text-4xl font-black mb-4 text-stone-800 tracking-tight">稅務最新動態</h2>
         <p class="text-stone-400 text-sm italic">點擊分類按鈕進行篩選</p>
       </div>
-
       <div id="article-filters" class="flex flex-wrap gap-2 mb-10 px-4"></div>
       <div id="articles-list" class="space-y-6"></div>
     </div>
@@ -363,14 +417,27 @@
       <button onclick="closePage('page-tools')" class="mb-10 text-stone-400 hover:text-stone-800 flex items-center gap-2 font-bold transition text-sm">
         <i data-lucide="arrow-left" size="16"></i> 返回首頁
       </button>
-      
       <div class="mb-12 px-4">
         <h2 class="text-4xl font-black mb-4 text-stone-800 tracking-tight">實用稅務工具</h2>
         <p class="text-stone-400 text-sm italic">點擊分類按鈕進行篩選</p>
       </div>
-
       <div id="tool-filters" class="flex flex-wrap gap-2 mb-10 px-4"></div>
       <div id="tools-list" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+    </div>
+  </div>
+
+  <!-- 常用表單及查詢頁面 -->
+  <div id="page-forms" class="sub-page">
+    <div class="max-w-4xl mx-auto pt-10 pb-20 px-4">
+      <button onclick="closePage('page-forms')" class="mb-10 text-stone-400 hover:text-stone-800 flex items-center gap-2 font-bold transition text-sm">
+        <i data-lucide="arrow-left" size="16"></i> 返回首頁
+      </button>
+      <div class="mb-12 px-4">
+        <h2 class="text-4xl font-black mb-4 text-stone-800 tracking-tight">常用表單及查詢</h2>
+        <p class="text-stone-400 text-sm italic">點擊分類按鈕進行篩選</p>
+      </div>
+      <div id="form-filters" class="flex flex-wrap gap-2 mb-10 px-4"></div>
+      <div id="forms-list" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
     </div>
   </div>
 
@@ -380,7 +447,6 @@
       <button onclick="closePage('article-detail-page')" class="mb-10 text-stone-400 hover:text-stone-800 flex items-center gap-2 font-bold transition text-sm">
         <i data-lucide="arrow-left" size="16"></i> 返回列表
       </button>
-      
       <div class="detail-container">
         <div id="detail-category-list" class="mb-8"></div>
         <h1 class="text-3xl md:text-5xl font-black mb-12 text-stone-800 leading-tight" id="detail-title"></h1>
@@ -391,9 +457,9 @@
   </div>
 
   <footer class="py-20 text-center text-stone-400 text-xs tracking-widest">
-    <div class="mb-4">TAX TOFU</div>
+    <div class="mb-4">TAX  TOFU</div>
     <div class="flex justify-center gap-4">
-      <span>LINE: @196amypy</span>
+      <span>LINE官方帳號: @196amypy</span>
       <span>|</span>
       <span>讓稅務更簡單</span>
     </div>
