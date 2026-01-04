@@ -3,18 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>小豆腐後台｜營運中樞</title>
+  <title>小豆腐後台｜管理者系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
   
   <!-- Quill 編輯器樣式 -->
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- Firebase SDK -->
+  <style>
+    :root { --accent: #8D7B68; --sidebar-bg: #F5F2F0; }
+    body { background: #fdfaf5; color: #54473F; font-family: sans-serif; }
+    
+    .sidebar-link {
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+      border-radius: 12px; transition: 0.3s; cursor: pointer; color: #786D66; font-weight: 500;
+    }
+    .sidebar-link:hover { background: rgba(141, 123, 104, 0.05); color: var(--accent); }
+    .sidebar-link.active { background: var(--accent); color: white; }
+
+    .main-panel { display: none; animation: fadeIn 0.3s ease-out; }
+    .main-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .card { background: white; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid #F0ECE9; }
+    .input-field { width: 100%; padding: 12px; border: 1px solid #E5E1DE; border-radius: 12px; outline: none; transition: 0.3s; }
+    .input-field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(141, 123, 104, 0.1); }
+    
+    .btn-primary { background: var(--accent); color: white; padding: 10px 20px; border-radius: 10px; font-weight: bold; transition: 0.3s; }
+    .btn-primary:hover { filter: brightness(1.1); }
+    
+    #editor-container { height: 400px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+  </style>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAcYPHZJcSTBRbhKy018keO7FiPyzb4c84",
@@ -22,8 +48,7 @@
       projectId: "tax-tofu",
       storageBucket: "tax-tofu.firebasestorage.app",
       messagingSenderId: "1031361168988",
-      appId: "1:1031361168988:web:ce06888cfd84de93958899",
-      measurementId: "G-TQ29X7NGZY"
+      appId: "1:1031361168988:web:ce06888cfd84de93958899"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -31,539 +56,372 @@
     const auth = getAuth(app);
     const appId = "tax-tofu";
 
-    // 全域變數存儲數據
-    let allCategories = {};
+    let allCategories = [];
     let allArticles = [];
     let allTools = [];
 
     // 初始化 Quill
     window.quill = new Quill('#editor-container', {
-      modules: {
-        toolbar: [
-          [{ 'header': [1, 2, 3, false] }],
-          ['bold', 'italic', 'underline', 'strike'],
-          [{ 'color': [] }, { 'background': [] }],
-          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-          ['link', 'image', 'clean']
-        ]
-      },
-      placeholder: '在這裡輸入白話稅務內容...',
+      modules: { toolbar: [[{ 'header': [1, 2, 3, false] }], ['bold', 'italic', 'underline'], [{ 'color': [] }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['link', 'image', 'clean']] },
+      placeholder: '在這裡分享稅務小故事...',
       theme: 'snow'
     });
 
-    signInAnonymously(auth).catch(err => console.error("認證失敗", err));
+    signInAnonymously(auth).catch(err => console.error(err));
 
-    onAuthStateChanged(auth, (user) => {
-      const statusEl = document.getElementById('auth-status');
-      if (user) {
-        statusEl.innerText = "🟢 雲端連線正常";
-        statusEl.className = "text-xs mt-1 text-green-600 font-medium";
+    // --- 數據監聽 ---
+    // 修改處：將 orderBy('weight', 'desc') 改為 'asc'，讓序號小排前面
+    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), orderBy('weight', 'asc')), (snap) => {
+      allCategories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderCategoryCheckboxes();
+      renderCategoryList();
+      renderFilterSelects();
+    });
+
+    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'articles'), orderBy('createdAt', 'desc')), (snap) => {
+      allArticles = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderArticleList();
+    });
+
+    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'tools'), orderBy('createdAt', 'desc')), (snap) => {
+      allTools = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderToolList();
+    });
+
+    // --- 界面切換 ---
+    window.switchTab = (tabId) => {
+      document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+      const activeTab = document.querySelector(`[data-tab="${tabId}"]`);
+      if(activeTab) activeTab.classList.add('active');
+      document.querySelectorAll('.main-panel').forEach(el => el.classList.remove('active'));
+      document.getElementById(`panel-${tabId}`).classList.add('active');
+    };
+
+    // --- 渲染功能 ---
+    function renderCategoryCheckboxes() {
+      const artContainer = document.getElementById('art-cat-checks');
+      const toolContainer = document.getElementById('tool-cat-checks');
+      const html = allCategories.map(cat => `
+        <label class="inline-flex items-center p-2 bg-stone-50 rounded-lg border border-stone-200 cursor-pointer hover:bg-amber-50">
+          <input type="checkbox" value="${cat.id}" class="cat-checkbox mr-2">
+          <span class="text-xs font-bold">${cat.name} <span class="text-[9px] text-stone-300">#${cat.weight}</span></span>
+        </label>
+      `).join('');
+      artContainer.innerHTML = html;
+      toolContainer.innerHTML = html;
+    }
+
+    function renderFilterSelects() {
+      const artFilter = document.getElementById('art-filter');
+      const toolFilter = document.getElementById('tool-filter');
+      const options = '<option value="all">所有標籤篩選</option>' + allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      artFilter.innerHTML = options;
+      toolFilter.innerHTML = options;
+    }
+
+    window.renderArticleList = () => {
+      const filter = document.getElementById('art-filter').value;
+      const filtered = filter === 'all' ? allArticles : allArticles.filter(a => (a.categoryIds || []).includes(filter));
+      document.getElementById('art-list-container').innerHTML = filtered.map(a => `
+        <div class="p-4 border-b flex justify-between items-center hover:bg-stone-50 transition">
+          <div class="truncate pr-4">
+            <div class="flex gap-1 mb-1">${getBadges(a.categoryIds)}</div>
+            <p class="font-bold text-stone-700 truncate">${a.title}</p>
+          </div>
+          <div class="flex gap-4 shrink-0">
+            <button onclick="editArticle('${a.id}')" class="text-amber-600 font-bold text-sm">修改</button>
+            <button onclick="deleteItem('articles', '${a.id}')" class="text-red-300 text-sm">刪除</button>
+          </div>
+        </div>
+      `).join('');
+    };
+
+    window.renderToolList = () => {
+      const filter = document.getElementById('tool-filter').value;
+      const filtered = filter === 'all' ? allTools : allTools.filter(t => (t.categoryIds || []).includes(filter));
+      document.getElementById('tool-list-container').innerHTML = filtered.map(t => `
+        <div class="p-4 border-b flex justify-between items-center hover:bg-stone-50 transition">
+          <div class="truncate pr-4">
+            <div class="flex gap-1 mb-1">${getBadges(t.categoryIds)}</div>
+            <p class="font-bold text-stone-700 truncate">${t.name}</p>
+          </div>
+          <div class="flex gap-4 shrink-0">
+            <button onclick="editTool('${t.id}')" class="text-amber-600 font-bold text-sm">修改</button>
+            <button onclick="deleteItem('tools', '${t.id}')" class="text-red-300 text-sm">刪除</button>
+          </div>
+        </div>
+      `).join('');
+    };
+
+    function renderCategoryList() {
+      document.getElementById('cat-list-container').innerHTML = allCategories.map(c => `
+        <div class="p-4 border-b flex justify-between items-center">
+          <div class="flex items-center gap-4">
+            <span class="bg-stone-100 text-stone-500 px-2 py-1 rounded text-xs font-black">序號 ${c.weight}</span>
+            <span class="font-bold">${c.name}</span>
+          </div>
+          <div class="flex gap-4">
+            <button onclick="prepareEditCat('${c.id}', '${c.name}', ${c.weight})" class="text-amber-600 text-sm">修改</button>
+            <button onclick="deleteItem('categories', '${c.id}')" class="text-red-300 text-sm">刪除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function getBadges(ids) {
+      if(!ids || ids.length === 0) return `<span class="px-2 py-0.5 bg-stone-100 text-stone-400 text-[10px] rounded font-bold">一般</span>`;
+      return ids.map(id => {
+        const name = allCategories.find(c => c.id === id)?.name || "一般";
+        return `<span class="px-2 py-0.5 bg-amber-50 text-amber-600 text-[10px] rounded font-bold">${name}</span>`;
+      }).join('');
+    }
+
+    // --- 儲存邏輯 ---
+    window.saveArticle = async () => {
+      const id = document.getElementById('art-id').value;
+      const title = document.getElementById('art-title').value;
+      const content = window.quill.root.innerHTML;
+      const categoryIds = Array.from(document.querySelectorAll('#art-cat-checks input:checked')).map(el => el.value);
+      if(!title || window.quill.getText().trim() === "") return alert("請填寫標題與內容");
+      
+      const data = { title, content, categoryIds: categoryIds.length ? categoryIds : ["general"], updatedAt: serverTimestamp() };
+      if(id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'articles', id), data);
+      else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'articles'), { ...data, createdAt: serverTimestamp() });
+      resetArticleForm(); alert("文章儲存成功！");
+    }
+
+    window.saveTool = async () => {
+      const id = document.getElementById('tool-id').value;
+      const name = document.getElementById('tool-name').value;
+      const link = document.getElementById('tool-link').value;
+      const description = document.getElementById('tool-desc').value;
+      const categoryIds = Array.from(document.querySelectorAll('#tool-cat-checks input:checked')).map(el => el.value);
+      if(!name || !link) return alert("請填寫名稱與網址");
+      
+      const data = { name, link, description, categoryIds: categoryIds.length ? categoryIds : ["general"], updatedAt: serverTimestamp() };
+      if(id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tools', id), data);
+      else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tools'), { ...data, createdAt: serverTimestamp() });
+      resetToolForm(); alert("工具儲存成功！");
+    }
+
+    window.saveCategory = async () => {
+      const id = document.getElementById('cat-id').value;
+      const name = document.getElementById('cat-name').value;
+      const weight = parseInt(document.getElementById('cat-weight').value) || 0;
+      if(!name) return;
+      if(id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id), { name, weight });
+      else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), { name, weight, createdAt: serverTimestamp() });
+      document.getElementById('cat-id').value = ""; document.getElementById('cat-name').value = ""; document.getElementById('cat-weight').value = 0;
+      alert("標籤設定已更新");
+    }
+
+    // --- 編輯功能 ---
+    window.editArticle = (id) => {
+      const a = allArticles.find(x => x.id === id);
+      document.getElementById('art-id').value = id;
+      document.getElementById('art-title').value = a.title;
+      window.quill.root.innerHTML = a.content;
+      document.querySelectorAll('#art-cat-checks input').forEach(el => el.checked = (a.categoryIds || []).includes(el.value));
+      document.getElementById('art-form-title').innerText = "修改新知文章";
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.editTool = (id) => {
+      const t = allTools.find(x => x.id === id);
+      document.getElementById('tool-id').value = id;
+      document.getElementById('tool-name').value = t.name;
+      document.getElementById('tool-link').value = t.link;
+      document.getElementById('tool-desc').value = t.description;
+      document.querySelectorAll('#tool-cat-checks input').forEach(el => el.checked = (t.categoryIds || []).includes(el.value));
+      document.getElementById('tool-btn-text').innerText = "更新工具";
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.prepareEditCat = (id, name, weight) => {
+      document.getElementById('cat-id').value = id;
+      document.getElementById('cat-name').value = name;
+      document.getElementById('cat-weight').value = weight;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.deleteItem = async (type, id) => {
+      if(confirm("確定刪除？此動作無法復原。")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', type, id));
+    };
+
+    window.resetArticleForm = () => {
+      document.getElementById('art-id').value = ""; document.getElementById('art-title').value = "";
+      window.quill.setContents([]);
+      document.querySelectorAll('#art-cat-checks input').forEach(el => el.checked = false);
+      document.getElementById('art-form-title').innerText = "撰寫新知文章";
+    };
+
+    window.resetToolForm = () => {
+      document.getElementById('tool-id').value = ""; document.getElementById('tool-name').value = "";
+      document.getElementById('tool-link').value = ""; document.getElementById('tool-desc').value = "";
+      document.querySelectorAll('#tool-cat-checks input').forEach(el => el.checked = false);
+      document.getElementById('tool-btn-text').innerText = "發佈工具";
+    };
+
+    window.checkPassword = () => {
+      if(document.getElementById('pw').value === "8888") {
+        document.getElementById('gate').style.display='none';
+        document.getElementById('app').classList.remove('hidden');
+        lucide.createIcons();
       }
-    });
-
-    // 1. 監聽分類列表
-    const catsCol = collection(db, 'artifacts', appId, 'public', 'data', 'categories');
-    onSnapshot(query(catsCol, orderBy('weight', 'desc')), (snapshot) => {
-      const list = document.getElementById('manage-categories-list');
-      const selectArt = document.getElementById('main-category');
-      const selectTool = document.getElementById('tool-category');
-      const filterArtSelect = document.getElementById('filter-category');
-      const filterToolSelect = document.getElementById('filter-tool-category');
-      
-      list.innerHTML = "";
-      const currentArtVal = selectArt.value;
-      const currentToolVal = selectTool.value;
-      const currentArtFilter = filterArtSelect.value;
-      const currentToolFilter = filterToolSelect.value;
-      
-      const categoryOptions = '<option value="">-- 選擇分類 --</option>';
-      const filterOptions = '<option value="all">所有分類</option>';
-      
-      selectArt.innerHTML = categoryOptions;
-      selectTool.innerHTML = categoryOptions;
-      filterArtSelect.innerHTML = filterOptions;
-      filterToolSelect.innerHTML = filterOptions;
-      
-      allCategories = {}; 
-
-      snapshot.forEach(record => {
-        const item = record.data();
-        const id = record.id;
-        allCategories[id] = item.name;
-        
-        list.innerHTML += `
-          <div class="border-b py-3 flex justify-between items-center group">
-            <div class="truncate pr-4">
-              <span class="inline-block w-8 h-8 bg-amber-100 text-amber-700 text-center leading-8 rounded-lg text-xs font-bold mr-2">${item.weight || 0}</span>
-              <span class="font-bold text-stone-700">${item.name}</span>
-            </div>
-            <div class="flex gap-3 shrink-0">
-              <button onclick="editCategory('${id}', '${item.name}', ${item.weight || 0})" class="text-amber-600 text-sm hover:underline">修改</button>
-              <button onclick="deleteItem('categories', '${id}')" class="text-red-400 text-sm hover:text-red-600">刪除</button>
-            </div>
-          </div>
-        `;
-
-        const opt = `<option value="${id}">${item.name}</option>`;
-        selectArt.innerHTML += opt;
-        selectTool.innerHTML += opt;
-        filterArtSelect.innerHTML += opt;
-        filterToolSelect.innerHTML += opt;
-      });
-
-      selectArt.value = currentArtVal;
-      selectTool.value = currentToolVal;
-      filterArtSelect.value = currentArtFilter;
-      filterToolSelect.value = currentToolFilter;
-      
-      renderArticleList();
-      renderToolList();
-    });
-
-    // 2. 監聽文章列表
-    const articlesCol = collection(db, 'artifacts', appId, 'public', 'data', 'articles');
-    onSnapshot(query(articlesCol, orderBy('createdAt', 'desc')), (snapshot) => {
-      allArticles = [];
-      snapshot.forEach(record => {
-        allArticles.push({ id: record.id, ...record.data() });
-      });
-      renderArticleList();
-    });
-
-    // 3. 監聽工具列表
-    const toolsCol = collection(db, 'artifacts', appId, 'public', 'data', 'tools');
-    onSnapshot(query(toolsCol, orderBy('createdAt', 'desc')), (snapshot) => {
-      allTools = [];
-      snapshot.forEach(record => {
-        allTools.push({ id: record.id, ...record.data() });
-      });
-      renderToolList();
-    });
-
-    // 渲染文章列表邏輯
-    window.renderArticleList = function() {
-      const list = document.getElementById('manage-articles-list');
-      const filterCat = document.getElementById('filter-category').value;
-      const sortType = document.getElementById('sort-articles').value;
-
-      let filtered = [...allArticles];
-      if (filterCat !== 'all') filtered = filtered.filter(a => a.categoryId === filterCat);
-
-      filtered.sort((a, b) => {
-        if (sortType === 'newest') return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
-        if (sortType === 'title') return a.title.localeCompare(b.title, 'zh-Hant');
-        if (sortType === 'category') {
-          const nameA = allCategories[a.categoryId] || "";
-          const nameB = allCategories[b.categoryId] || "";
-          return nameA.localeCompare(nameB, 'zh-Hant');
-        }
-        return 0;
-      });
-
-      list.innerHTML = filtered.length ? "" : '<p class="text-center py-10 text-stone-400 text-sm">暫無匹配的文章</p>';
-      filtered.forEach(item => {
-        const catName = allCategories[item.categoryId] || "未分類";
-        list.innerHTML += `
-          <div class="border-b py-4 flex justify-between items-center group">
-            <div class="truncate pr-4">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] rounded font-bold">${catName}</span>
-                <p class="font-bold text-stone-700 truncate">${item.title}</p>
-              </div>
-              <p class="text-xs text-stone-400 italic">發佈於 ${item.createdAt?.toDate().toLocaleDateString() || '剛才'}</p>
-            </div>
-            <div class="flex gap-3 shrink-0">
-              <button onclick="editItem('articles', '${item.id}', '${btoa(encodeURIComponent(JSON.stringify(item)))}')" class="text-amber-600 text-sm font-bold hover:underline">修改</button>
-              <button onclick="deleteItem('articles', '${item.id}')" class="text-red-300 text-sm hover:text-red-600 transition">刪除</button>
-            </div>
-          </div>
-        `;
-      });
     };
-
-    // 渲染工具列表邏輯 (新增分類顯示與排序)
-    window.renderToolList = function() {
-      const list = document.getElementById('manage-tools-list');
-      const filterCat = document.getElementById('filter-tool-category').value;
-      const sortType = document.getElementById('sort-tools').value;
-
-      let filtered = [...allTools];
-      if (filterCat !== 'all') filtered = filtered.filter(t => t.categoryId === filterCat);
-
-      filtered.sort((a, b) => {
-        if (sortType === 'newest') return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
-        if (sortType === 'name') return a.name.localeCompare(b.name, 'zh-Hant');
-        if (sortType === 'category') {
-          const nameA = allCategories[a.categoryId] || "";
-          const nameB = allCategories[b.categoryId] || "";
-          return nameA.localeCompare(nameB, 'zh-Hant');
-        }
-        return 0;
-      });
-
-      list.innerHTML = filtered.length ? "" : '<p class="text-center py-10 text-stone-400 text-sm">暫無匹配的工具</p>';
-      filtered.forEach(item => {
-        const catName = allCategories[item.categoryId] || "未分類";
-        list.innerHTML += `
-          <div class="border-b py-4 flex justify-between items-center group">
-            <div class="truncate pr-4">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="px-2 py-0.5 bg-amber-50 text-amber-600 text-[10px] rounded font-bold">${catName}</span>
-                <p class="font-bold text-stone-700 truncate">${item.name}</p>
-              </div>
-              <p class="text-xs text-stone-400 truncate">${item.link}</p>
-            </div>
-            <div class="flex gap-3 shrink-0">
-              <button onclick="editItem('tools', '${item.id}', '${btoa(encodeURIComponent(JSON.stringify(item)))}')" class="text-amber-600 text-sm font-bold hover:underline">修改</button>
-              <button onclick="deleteItem('tools', '${item.id}')" class="text-red-300 text-sm hover:text-red-600 transition">刪除</button>
-            </div>
-          </div>
-        `;
-      });
-    };
-
-    window.db = db;
-    window.appId = appId;
-    window.addDoc = addDoc;
-    window.updateDoc = updateDoc;
-    window.deleteDoc = deleteDoc;
-    window.doc = doc;
-    window.collection = collection;
-    window.serverTimestamp = serverTimestamp;
   </script>
-
-  <style>
-    :root {
-      --primary-yellow: #FFF2CC;
-      --accent-brown: #8D7B68;
-    }
-    body { background: #fdfaf5; color: #54473F; font-family: sans-serif; transition: 0.3s; }
-    .card { background: white; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 25px; margin-bottom: 20px; }
-    .btn-primary { background: var(--accent-brown); color: white; padding: 12px 24px; border-radius: 12px; font-weight: bold; transition: 0.3s; }
-    .btn-ai { background: #fdf2f8; color: #db2777; border: 1px solid #fbcfe8; padding: 10px 16px; border-radius: 10px; font-weight: bold; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
-    
-    .nav-tab { padding: 12px 20px; border-radius: 12px 12px 0 0; cursor: pointer; font-weight: bold; opacity: 0.6; transition: 0.2s; }
-    .nav-tab.active { background: white; opacity: 1; color: var(--accent-brown); box-shadow: 0 -5px 10px rgba(0,0,0,0.02); }
-
-    #editor-container { height: 350px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
-    .ql-toolbar.ql-snow { border-top-left-radius: 12px; border-top-right-radius: 12px; background: #fcfcfc; }
-
-    .section-content { display: none; opacity: 0; }
-    .section-content.active { display: grid; opacity: 1; }
-
-    #ai-drawer {
-      position: fixed; top: 0; right: -400px; width: 380px; height: 100%;
-      background: white; box-shadow: -10px 0 30px rgba(0,0,0,0.1);
-      z-index: 2000; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      display: flex; flex-direction: column;
-    }
-    #ai-drawer.open { right: 0; }
-
-    #lock-screen {
-      position: fixed; inset: 0; background: var(--primary-yellow);
-      z-index: 10000; display: flex; align-items: center; justify-content: center;
-    }
-    .lock-box { background: white; padding: 40px; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; max-width: 320px; width: 90%; }
-  </style>
 </head>
-<body class="p-4 md:p-10">
+<body>
 
-  <!-- 密碼鎖 -->
-  <div id="lock-screen">
-    <div class="lock-box">
-      <div class="w-16 h-16 bg-amber-100 rounded-2xl mx-auto mb-6 flex items-center justify-center text-3xl">🗄️</div>
-      <h2 class="text-xl font-bold mb-2 text-stone-800">營運中樞安全檢查</h2>
-      <p class="text-sm text-stone-400 mb-6">請輸入管理員密碼以繼續</p>
-      <input type="password" id="admin-password" placeholder="輸入密碼" class="w-full p-3 border rounded-xl text-center mb-4 tracking-widest outline-none focus:ring-2 focus:ring-amber-200">
-      <button onclick="checkPassword()" class="btn-primary w-full">進入後台</button>
-      <p id="error-msg" class="text-red-400 text-xs mt-3 hidden">密碼錯誤，請再試一次</p>
+  <!-- 密碼閘門 -->
+  <div id="gate" class="fixed inset-0 bg-stone-100 z-[9999] flex items-center justify-center">
+    <div class="bg-white p-10 rounded-[32px] shadow-2xl text-center w-96 border border-stone-200">
+      <div class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-6 text-amber-600">
+        <i data-lucide="lock" size="32"></i>
+      </div>
+      <h2 class="text-2xl font-black mb-6">管理者驗證</h2>
+      <input type="password" id="pw" placeholder="請輸入管理密碼" class="w-full p-4 border rounded-2xl text-center mb-6 outline-none focus:border-amber-500">
+      <button onclick="checkPassword()" class="btn-primary w-full py-4 text-lg">進入管理中樞</button>
     </div>
   </div>
 
-  <!-- AI 側邊欄抽屜 -->
-  <div id="ai-drawer">
-    <div class="p-6 border-b flex justify-between items-center bg-pink-50">
-      <h3 class="font-black text-pink-600">✨ AI 內容小幫手</h3>
-      <button onclick="toggleAIDrawer()" class="text-stone-400 hover:text-stone-700">✕</button>
-    </div>
-    <div class="flex-1 overflow-y-auto p-6 space-y-6">
-      <div id="ai-result" class="text-sm leading-relaxed text-stone-700 whitespace-pre-wrap">請先輸入文章內容，再點擊下方 AI 功能。</div>
-    </div>
-    <div class="p-4 border-t grid grid-cols-2 gap-2">
-      <button onclick="callAIFeature('polish')" class="text-xs bg-stone-800 text-white py-2 rounded-lg hover:bg-black transition">✨ 大白話潤飾</button>
-      <button onclick="callAIFeature('summarize')" class="text-xs bg-stone-800 text-white py-2 rounded-lg hover:bg-black transition">✨ 縮減成精華</button>
-      <button onclick="callAIFeature('image-idea')" class="text-xs bg-stone-800 text-white py-2 rounded-lg hover:bg-black transition">🖼️ 配圖建議</button>
-      <button onclick="copyAIResult()" class="text-xs bg-pink-100 text-pink-600 py-2 rounded-lg font-bold">📋 複製結果</button>
-    </div>
-  </div>
-
-  <div id="main-content-wrapper" class="hidden">
-    <header class="max-w-6xl mx-auto mb-6 flex justify-between items-end">
-      <div>
-        <h1 class="text-3xl font-black text-stone-700 tracking-tight">小豆腐營運中樞 🛠️</h1>
-        <p id="auth-status" class="text-xs mt-1 text-amber-500 font-medium">🟡 正在連線中...</p>
+  <div id="app" class="hidden flex min-h-screen">
+    
+    <!-- 側邊欄 -->
+    <aside class="w-64 bg-stone-100 border-r border-stone-200 p-6 flex flex-col shrink-0">
+      <div class="mb-10 px-2">
+        <h1 class="text-xl font-black text-stone-800">稅務小豆腐</h1>
+        <p class="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">Admin Dashboard</p>
       </div>
-      <div class="flex gap-4 items-center">
-        <button onclick="toggleAIDrawer()" class="btn-ai text-sm">✨ AI 小幫手</button>
-        <button onclick="logout()" class="text-sm text-stone-400 hover:text-red-400 font-medium">登出</button>
-      </div>
-    </header>
 
-    <div class="max-w-6xl mx-auto flex gap-1">
-      <div onclick="switchSection('write')" id="tab-write" class="nav-tab active">內容創作</div>
-      <div onclick="switchSection('category')" id="tab-category" class="nav-tab">分類管理</div>
-      <div onclick="switchSection('tools-manage')" id="tab-tools-manage" class="nav-tab">工具維護</div>
-    </div>
+      <nav class="space-y-2 flex-1">
+        <div onclick="switchTab('write')" data-tab="write" class="sidebar-link active">
+          <i data-lucide="pen-tool" size="18"></i> 稅務新知發佈
+        </div>
+        <div onclick="switchTab('tools')" data-tab="tools" class="sidebar-link">
+          <i data-lucide="wrench" size="18"></i> 稅務小工具管理
+        </div>
+        <div onclick="switchTab('tags')" data-tab="tags" class="sidebar-link">
+          <i data-lucide="tags" size="18"></i> 標籤系統維護
+        </div>
+      </nav>
 
-    <main class="max-w-6xl mx-auto">
+      <button onclick="location.reload()" class="mt-auto sidebar-link text-red-400">
+        <i data-lucide="log-out" size="18"></i> 登出系統
+      </button>
+    </aside>
+
+    <!-- 主內容區 -->
+    <main class="flex-1 p-8 lg:p-12 overflow-y-auto">
       
-      <!-- 內容創作 -->
-      <div id="section-write" class="section-content active grid-cols-1 lg:grid-cols-12 gap-8">
-        <div class="lg:col-span-7">
-          <section class="card">
-            <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-stone-800">✍️ <span id="form-title">撰寫部落格文章</span></h2>
-            <div class="space-y-6">
-              <input type="hidden" id="edit-id">
-              <div class="grid grid-cols-2 gap-4">
-                <div class="col-span-2 md:col-span-1">
-                  <label class="block text-sm font-bold mb-1 text-stone-500">文章標題</label>
-                  <input type="text" id="main-title" placeholder="標題" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200">
+      <!-- 1. 新知面板 -->
+      <section id="panel-write" class="main-panel active">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+          <div class="xl:col-span-8">
+            <div class="card p-8">
+              <h2 id="art-form-title" class="text-2xl font-black mb-6">撰寫新知文章</h2>
+              <input type="hidden" id="art-id">
+              <div class="space-y-6">
+                <div>
+                  <label class="block text-xs font-bold text-stone-400 mb-2">文章標題</label>
+                  <input type="text" id="art-title" class="input-field text-lg font-bold" placeholder="例如：113年綜所稅申報懶人包">
                 </div>
-                <div class="col-span-2 md:col-span-1">
-                  <label class="block text-sm font-bold mb-1 text-stone-500">所屬分類</label>
-                  <select id="main-category" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200 bg-white">
-                    <option value="">-- 選擇分類 --</option>
-                  </select>
+                <div>
+                  <label class="block text-xs font-bold text-stone-400 mb-2">選擇適用標籤 (可多選)</label>
+                  <div id="art-cat-checks" class="flex flex-wrap gap-2"></div>
+                </div>
+                <div>
+                  <div id="editor-container"></div>
+                </div>
+                <div class="flex gap-4">
+                  <button onclick="saveArticle()" class="btn-primary flex-1">儲存並發佈文章</button>
+                  <button onclick="resetArticleForm()" class="px-6 py-2 text-stone-400 font-bold text-sm">重設</button>
                 </div>
               </div>
-              <div id="editor-container"></div>
-              <button onclick="saveData()" id="save-btn" class="btn-primary w-full py-4 text-lg">確認儲存並發佈</button>
             </div>
-          </section>
-        </div>
-        <div class="lg:col-span-5">
-          <section class="card h-full flex flex-col">
-            <h2 class="text-lg font-bold mb-4 border-b pb-2 text-stone-700">📘 文章列表</h2>
-            <div class="grid grid-cols-2 gap-2 mb-4">
-              <select id="filter-category" onchange="renderArticleList()" class="text-xs p-2 border rounded-lg bg-stone-50 outline-none"></select>
-              <select id="sort-articles" onchange="renderArticleList()" class="text-xs p-2 border rounded-lg bg-stone-50 outline-none">
-                <option value="newest">最新發佈</option>
-                <option value="category">依分類排序</option>
-                <option value="title">依標題排序</option>
-              </select>
+          </div>
+          <div class="xl:col-span-4">
+            <div class="card p-6 h-full flex flex-col">
+              <div class="flex justify-between items-center mb-6">
+                <h3 class="font-black text-lg">文章資料庫</h3>
+                <select id="art-filter" onchange="renderArticleList()" class="text-xs p-1.5 border rounded-lg"></select>
+              </div>
+              <div id="art-list-container" class="space-y-1 overflow-y-auto flex-1"></div>
             </div>
-            <div id="manage-articles-list" class="divide-y divide-stone-100 flex-1 overflow-y-auto pr-2 min-h-[400px]"></div>
-          </section>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <!-- 分類管理 -->
-      <div id="section-category" class="section-content grid-cols-1 lg:grid-cols-12 gap-8">
-        <div class="lg:col-span-5">
-          <section class="card">
-            <h2 class="text-xl font-bold mb-6 text-stone-800">🏷️ 分類管理</h2>
-            <div class="space-y-4">
-              <input type="hidden" id="cat-edit-id">
-              <input type="text" id="cat-name" placeholder="分類名稱" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200">
-              <input type="number" id="cat-weight" placeholder="排序權重 (數字大在前)" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200">
-              <div class="flex gap-2">
-                <button onclick="saveCategory()" id="cat-save-btn" class="btn-primary flex-1">儲存分類</button>
-                <button onclick="resetCategoryForm()" class="bg-stone-100 px-4 rounded-xl text-stone-500">取消</button>
-              </div>
-            </div>
-          </section>
-        </div>
-        <div class="lg:col-span-7">
-          <section class="card">
-            <h2 class="text-lg font-bold mb-4 border-b pb-2 text-stone-700">目前的分類 (依權重)</h2>
-            <div id="manage-categories-list" class="divide-y"></div>
-          </section>
-        </div>
-      </div>
+      <!-- 2. 工具面板 -->
+      <section id="panel-tools" class="main-panel">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+          <div class="xl:col-span-7">
+            <div class="card p-8">
+              <h2 class="text-2xl font-black mb-6">發佈稅務小工具</h2>
+              <input type="hidden" id="tool-id">
+              <div class="space-y-6">
+                <input type="text" id="tool-name" class="input-field" placeholder="工具名稱 (如：健保費率試算)">
+                <input type="text" id="tool-link" class="input-field" placeholder="外部網址 (https://...)">
+                <textarea id="tool-desc" class="input-field h-24" placeholder="簡短介紹內容..."></textarea>
+                
+                <div>
+                  <label class="block text-xs font-bold text-stone-400 mb-2 uppercase tracking-widest">適用標籤</label>
+                  <div id="tool-cat-checks" class="flex flex-wrap gap-2"></div>
+                </div>
 
-      <!-- 工具維護 (新增分類排序功能) -->
-      <div id="section-tools-manage" class="section-content grid-cols-1 lg:grid-cols-12 gap-8">
-        <div class="lg:col-span-5">
-          <section class="card">
-            <h2 class="text-xl font-bold mb-6 text-stone-800">🧮 工具與連結維護</h2>
-            <div class="space-y-4">
-              <input type="hidden" id="tool-edit-id">
-              <div class="grid grid-cols-1 gap-4">
-                <div>
-                  <label class="block text-sm font-bold mb-1 text-stone-500">工具名稱</label>
-                  <input type="text" id="tool-name" placeholder="如：綜合所得稅試算" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200">
-                </div>
-                <div>
-                  <label class="block text-sm font-bold mb-1 text-stone-500">所屬分類</label>
-                  <select id="tool-category" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200 bg-white"></select>
-                </div>
-                <div>
-                  <label class="block text-sm font-bold mb-1 text-stone-500">網址</label>
-                  <input type="text" id="tool-link" placeholder="https://..." class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-amber-200">
-                </div>
-                <div>
-                  <label class="block text-sm font-bold mb-1 text-stone-500">簡短描述</label>
-                  <textarea id="tool-desc" placeholder="簡單說明這個工具的用途" class="w-full p-3 border rounded-xl h-24 outline-none focus:ring-2 focus:ring-amber-200"></textarea>
+                <div class="flex gap-4">
+                  <button onclick="saveTool()" class="btn-primary flex-1"><span id="tool-btn-text">發佈工具</span></button>
+                  <button onclick="resetToolForm()" class="text-stone-400 text-sm">取消修改</button>
                 </div>
               </div>
-              <button onclick="saveTool()" id="tool-save-btn" class="btn-primary w-full">確認發佈工具</button>
             </div>
-          </section>
-        </div>
-        <div class="lg:col-span-7">
-          <section class="card h-full flex flex-col">
-            <h2 class="text-lg font-bold mb-4 border-b pb-2 text-stone-700">🛠️ 現有工具列表</h2>
-            <div class="grid grid-cols-2 gap-2 mb-4">
-              <select id="filter-tool-category" onchange="renderToolList()" class="text-xs p-2 border rounded-lg bg-stone-50 outline-none"></select>
-              <select id="sort-tools" onchange="renderToolList()" class="text-xs p-2 border rounded-lg bg-stone-50 outline-none">
-                <option value="newest">最新新增</option>
-                <option value="category">依分類排序</option>
-                <option value="name">依名稱排序</option>
-              </select>
+          </div>
+          <div class="xl:col-span-5">
+            <div class="card p-6 h-full flex flex-col">
+              <div class="flex justify-between items-center mb-6">
+                <h3 class="font-black text-lg">現有工具</h3>
+                <select id="tool-filter" onchange="renderToolList()" class="text-xs p-1.5 border rounded-lg"></select>
+              </div>
+              <div id="tool-list-container" class="space-y-1 flex-1 overflow-y-auto"></div>
             </div>
-            <div id="manage-tools-list" class="divide-y divide-stone-100 flex-1 overflow-y-auto pr-2 min-h-[400px]"></div>
-          </section>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <!-- 3. 標籤面板 -->
+      <section id="panel-tags" class="main-panel">
+        <div class="max-w-4xl mx-auto">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="card p-8">
+              <h2 class="text-2xl font-black mb-6">建立新標籤</h2>
+              <p class="text-xs text-stone-400 mb-4 italic">小技巧：序號越小排越前面 (如 1, 2, 3...)</p>
+              <input type="hidden" id="cat-id">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs font-bold text-stone-400 mb-2">標籤名稱</label>
+                  <input type="text" id="cat-name" class="input-field" placeholder="標籤名稱 (如：綜所稅)">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-stone-400 mb-2">權重序號 (越小越靠前)</label>
+                  <input type="number" id="cat-weight" class="input-field" placeholder="例如：1">
+                </div>
+                <button onclick="saveCategory()" class="btn-primary w-full py-4 mt-4">儲存標籤設定</button>
+              </div>
+            </div>
+            <div class="card p-8 flex flex-col">
+              <h2 class="text-2xl font-black mb-6">所有標籤列表</h2>
+              <div id="cat-list-container" class="divide-y overflow-y-auto max-h-[500px]"></div>
+            </div>
+          </div>
+        </div>
+      </section>
 
     </main>
   </div>
 
   <script>
-    const correctPassword = "8888"; 
-    const apiKey = ""; 
-
-    function switchSection(id) {
-      ['write', 'category', 'tools-manage'].forEach(s => {
-        document.getElementById(`section-${s}`).classList.remove('active');
-        document.getElementById(`tab-${s}`).classList.remove('active');
-      });
-      document.getElementById(`section-${id}`).classList.add('active');
-      document.getElementById(`tab-${id}`).classList.add('active');
-    }
-
-    // 分類操作
-    async function saveCategory() {
-      const name = document.getElementById('cat-name').value;
-      const weight = parseInt(document.getElementById('cat-weight').value) || 0;
-      const id = document.getElementById('cat-edit-id').value;
-      if(!name) return alert("請填寫分類名稱");
-      try {
-        if(id) await window.updateDoc(window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'categories', id), { name, weight });
-        else await window.addDoc(window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'categories'), { name, weight, createdAt: window.serverTimestamp() });
-        resetCategoryForm();
-      } catch (e) { alert("操作失敗"); }
-    }
-
-    function editCategory(id, name, weight) {
-      document.getElementById('cat-edit-id').value = id;
-      document.getElementById('cat-name').value = name;
-      document.getElementById('cat-weight').value = weight;
-      document.getElementById('cat-save-btn').innerText = "更新分類";
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function resetCategoryForm() {
-      document.getElementById('cat-edit-id').value = "";
-      document.getElementById('cat-name').value = "";
-      document.getElementById('cat-weight').value = 0;
-      document.getElementById('cat-save-btn').innerText = "儲存分類";
-    }
-
-    // 工具操作
-    async function saveTool() {
-      const id = document.getElementById('tool-edit-id').value;
-      const name = document.getElementById('tool-name').value;
-      const categoryId = document.getElementById('tool-category').value;
-      const link = document.getElementById('tool-link').value;
-      const description = document.getElementById('tool-desc').value;
-      if(!name || !link || !categoryId) return alert("請填寫完整內容（含分類）");
-      
-      const btn = document.getElementById('tool-save-btn');
-      btn.disabled = true;
-      try {
-        if(id) await window.updateDoc(window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'tools', id), { name, categoryId, link, description });
-        else await window.addDoc(window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'tools'), { name, categoryId, link, description, createdAt: window.serverTimestamp() });
-        alert("工具已儲存！");
-        resetToolForm();
-      } catch (e) { alert("錯誤"); } finally { btn.disabled = false; }
-    }
-
-    function resetToolForm() {
-      document.getElementById('tool-edit-id').value = "";
-      document.getElementById('tool-name').value = "";
-      document.getElementById('tool-category').value = "";
-      document.getElementById('tool-link').value = "";
-      document.getElementById('tool-desc').value = "";
-      document.getElementById('tool-save-btn').innerText = "確認發佈工具";
-    }
-
-    // 文章保存
-    async function saveData() {
-      const id = document.getElementById('edit-id').value;
-      const title = document.getElementById('main-title').value;
-      const categoryId = document.getElementById('main-category').value;
-      const content = window.quill.root.innerHTML;
-      if(!title || !categoryId || window.quill.getText().trim() === "") return alert("請填寫完整內容");
-
-      const btn = document.getElementById('save-btn');
-      btn.disabled = true;
-      try {
-        if(id) await window.updateDoc(window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'articles', id), { title, categoryId, content });
-        else await window.addDoc(window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'articles'), { title, categoryId, content, createdAt: window.serverTimestamp() });
-        alert("文章已儲存！");
-        resetForm();
-      } catch (e) { alert("儲存失敗"); } finally { btn.disabled = false; }
-    }
-
-    window.editItem = function(type, id, encodedData) {
-      const data = JSON.parse(decodeURIComponent(atob(encodedData)));
-      if(type === 'articles') {
-        document.getElementById('edit-id').value = id;
-        document.getElementById('main-title').value = data.title;
-        document.getElementById('main-category').value = data.categoryId || "";
-        window.quill.root.innerHTML = data.content;
-        document.getElementById('form-title').innerText = "修改文章內容";
-        switchSection('write');
-      } else if (type === 'tools') {
-        document.getElementById('tool-edit-id').value = id;
-        document.getElementById('tool-name').value = data.name;
-        document.getElementById('tool-category').value = data.categoryId || "";
-        document.getElementById('tool-link').value = data.link;
-        document.getElementById('tool-desc').value = data.description || "";
-        document.getElementById('tool-save-btn').innerText = "更新工具資訊";
-        switchSection('tools-manage');
-      }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    window.deleteItem = async function(type, id) {
-      if(!confirm("⚠️ 確定要刪除嗎？")) return;
-      await window.deleteDoc(window.doc(window.db, 'artifacts', window.appId, 'public', 'data', type, id));
-    }
-
-    function resetForm() {
-      document.getElementById('edit-id').value = "";
-      document.getElementById('main-title').value = "";
-      document.getElementById('main-category').value = "";
-      window.quill.setContents([]);
-      document.getElementById('form-title').innerText = "撰寫部落格文章";
-    }
-
-    // AI & 其他 (密碼鎖、登出等)
-    function toggleAIDrawer() { document.getElementById('ai-drawer').classList.toggle('open'); }
-    function checkPassword() {
-      if (document.getElementById('admin-password').value === correctPassword) unlock(); 
-      else document.getElementById('error-msg').classList.remove('hidden');
-    }
-    function unlock() {
-      document.getElementById('lock-screen').style.display = "none";
-      document.getElementById('main-content-wrapper').classList.replace('hidden', 'block');
-      sessionStorage.setItem('isLoggedIn', 'true');
-    }
-    function logout() { sessionStorage.removeItem('isLoggedIn'); window.location.reload(); }
-    window.onload = () => { if (sessionStorage.getItem('isLoggedIn') === 'true') unlock(); };
-    document.getElementById('admin-password')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') checkPassword(); });
+    // 延遲啟動圖標，確保密碼登入後才加載
+    window.onload = () => { lucide.createIcons(); };
   </script>
 </body>
 </html>
