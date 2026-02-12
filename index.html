@@ -44,7 +44,6 @@
       display: flex; align-items: center; justify-content: center;
       z-index: 2;
     }
-    /* 豆腐底部陰影 */
     .tofu-shadow {
       width: 60px; height: 10px;
       background: rgba(84, 71, 63, 0.1);
@@ -84,7 +83,6 @@
       border-color: var(--accent);
     }
     
-    /* 首頁圖示背景圈 */
     .icon-circle {
       width: 80px; height: 80px;
       background: var(--light-yellow);
@@ -100,7 +98,6 @@
       transform: rotate(-5deg);
     }
 
-    /* 頁面切換佈局 */
     .sub-page {
       position: fixed; top: 0; left: 100%; width: 100%; height: 100%;
       background: var(--light-yellow); z-index: 1000;
@@ -109,7 +106,6 @@
     }
     .sub-page.active { left: 0; }
 
-    /* 分類標籤按鈕 */
     .cat-btn {
       padding: 8px 20px;
       border-radius: 99px;
@@ -126,7 +122,6 @@
       box-shadow: 0 4px 12px rgba(141, 123, 104, 0.2);
     }
 
-    /* 文章內部的標籤 */
     .tag-badge {
       display: inline-block;
       padding: 4px 12px;
@@ -139,7 +134,6 @@
       border: 1px solid #efeae5;
     }
 
-    /* 文章方塊樣式 */
     .article-block {
       background: var(--white);
       border-radius: 28px;
@@ -155,7 +149,6 @@
       box-shadow: 0 15px 35px rgba(0,0,0,0.07);
     }
 
-    /* 詳情頁容器 */
     .detail-container {
       background: var(--white);
       border-radius: 40px;
@@ -169,7 +162,6 @@
 
     .article-body-content img { max-width: 100%; border-radius: 20px; margin: 24px 0; }
     
-    /* 捲軸美化 */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #e8e8e8; border-radius: 10px; }
@@ -192,7 +184,6 @@
     const db = getFirestore(app);
     const appId = "tax-tofu";
 
-    // 全域狀態
     window.state = {
       articles: [],
       tools: [],
@@ -203,7 +194,6 @@
       currentFormCat: 'all'
     };
 
-    // --- 資料監聽 ---
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), orderBy('weight', 'asc')), (snap) => {
       window.state.categories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderFilters('article-filters', 'currentArticleCat', 'filterArticle');
@@ -226,7 +216,6 @@
       renderForms();
     });
 
-    // --- 渲染功能 ---
     function renderFilters(containerId, stateKey, callbackName) {
       const container = document.getElementById(containerId);
       if (!container) return;
@@ -272,11 +261,11 @@
         return;
       }
 
+      // 已移除內容摘要 p 標籤，僅保留標題與按鈕
       container.innerHTML = filtered.map(data => `
         <div class="article-block" onclick="openArticleDetail('${data.id}')">
           <div class="mb-4">${getCategoryBadges(data.categoryIds || (data.categoryId ? [data.categoryId] : []))}</div>
-          <h3 class="font-black text-2xl text-stone-700 mb-3 leading-tight">${data.title}</h3>
-          <p class="text-stone-400 line-clamp-2 mb-6 leading-relaxed text-sm">${stripHtml(data.content)}</p>
+          <h3 class="font-black text-2xl text-stone-700 mb-6 leading-tight">${data.title}</h3>
           <div class="flex items-center text-xs font-bold text-stone-300 uppercase tracking-widest group">
             繼續閱讀 <span class="ml-2 transform group-hover:translate-x-1 transition">→</span>
           </div>
@@ -287,16 +276,8 @@
     function renderTools() {
       const container = document.getElementById('tools-list');
       if (!container) return;
-
-      const filtered = window.state.currentToolCat === 'all' 
-        ? window.state.tools 
-        : window.state.tools.filter(t => (t.categoryIds || [t.categoryId]).includes(window.state.currentToolCat));
-      
-      if(filtered.length === 0) {
-        container.innerHTML = `<div class="text-center py-20 text-stone-300 col-span-full">目前尚無相關工具</div>`;
-        return;
-      }
-
+      const filtered = window.state.currentToolCat === 'all' ? window.state.tools : window.state.tools.filter(t => (t.categoryIds || [t.categoryId]).includes(window.state.currentToolCat));
+      if(filtered.length === 0) { container.innerHTML = `<div class="text-center py-20 text-stone-300 col-span-full">目前尚無相關工具</div>`; return; }
       container.innerHTML = filtered.map(data => `
         <a href="${data.link}" target="_blank" class="card block">
           <div class="flex justify-between items-start">
@@ -305,9 +286,7 @@
               <h3 class="font-bold text-lg text-stone-700 mb-2">${data.name}</h3>
               <p class="text-xs text-stone-400 line-clamp-1">${data.description || ''}</p>
             </div>
-            <div class="text-stone-200 mt-1">
-              <i data-lucide="external-link" size="18"></i>
-            </div>
+            <div class="text-stone-200 mt-1"><i data-lucide="external-link" size="18"></i></div>
           </div>
         </a>
       `).join('');
@@ -317,16 +296,8 @@
     function renderForms() {
       const container = document.getElementById('forms-list');
       if (!container) return;
-
-      const filtered = window.state.currentFormCat === 'all' 
-        ? window.state.forms 
-        : window.state.forms.filter(t => (t.categoryIds || [t.categoryId]).includes(window.state.currentFormCat));
-      
-      if(filtered.length === 0) {
-        container.innerHTML = `<div class="text-center py-20 text-stone-300 col-span-full">目前尚無相關表單</div>`;
-        return;
-      }
-
+      const filtered = window.state.currentFormCat === 'all' ? window.state.forms : window.state.forms.filter(t => (t.categoryIds || [t.categoryId]).includes(window.state.currentFormCat));
+      if(filtered.length === 0) { container.innerHTML = `<div class="text-center py-20 text-stone-300 col-span-full">目前尚無相關表單</div>`; return; }
       container.innerHTML = filtered.map(data => `
         <a href="${data.link}" target="_blank" class="card block">
           <div class="flex justify-between items-start">
@@ -335,9 +306,7 @@
               <h3 class="font-bold text-lg text-stone-700 mb-2">${data.name}</h3>
               <p class="text-xs text-stone-400 line-clamp-1">${data.description || ''}</p>
             </div>
-            <div class="text-stone-200 mt-1">
-              <i data-lucide="file-text" size="18"></i>
-            </div>
+            <div class="text-stone-200 mt-1"><i data-lucide="file-text" size="18"></i></div>
           </div>
         </a>
       `).join('');
@@ -389,45 +358,29 @@
 
   <main class="max-w-6xl mx-auto px-6 py-10">
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-      <!-- 稅務新知 -->
       <div class="card text-center cursor-pointer group" onclick="showPage('page-articles')">
-        <div class="icon-circle">
-          <i data-lucide="pen-tool" size="32" stroke-width="1.5"></i>
-        </div>
+        <div class="icon-circle"><i data-lucide="pen-tool" size="32" stroke-width="1.5"></i></div>
         <h2 class="text-xl font-bold text-stone-700">稅務新知</h2>
         <p class="text-xs text-stone-400 mt-3 font-medium tracking-wider">最新法規與專業分析</p>
       </div>
-
-      <!-- 稅務小工具 -->
       <div class="card text-center cursor-pointer group" onclick="showPage('page-tools')">
-        <div class="icon-circle">
-          <i data-lucide="wrench" size="32" stroke-width="1.5"></i>
-        </div>
+        <div class="icon-circle"><i data-lucide="wrench" size="32" stroke-width="1.5"></i></div>
         <h2 class="text-xl font-bold text-stone-700">稅務小工具</h2>
         <p class="text-xs text-stone-400 mt-3 font-medium tracking-wider">實用連結與快速試算</p>
       </div>
-
-      <!-- 常用表單及查詢 -->
       <div class="card text-center cursor-pointer group" onclick="showPage('page-forms')">
-        <div class="icon-circle">
-          <i data-lucide="file-search" size="32" stroke-width="1.5"></i>
-        </div>
+        <div class="icon-circle"><i data-lucide="file-search" size="32" stroke-width="1.5"></i></div>
         <h2 class="text-xl font-bold text-stone-700">常用表單及查詢</h2>
         <p class="text-xs text-stone-400 mt-3 font-medium tracking-wider">表格下載與相關查詢</p>
       </div>
-
-      <!-- 預約諮詢 -->
       <a href="https://lin.ee/98FMxAk" target="_blank" class="card text-center block group">
-        <div class="icon-circle">
-          <i data-lucide="message-circle" size="32" stroke-width="1.5"></i>
-        </div>
+        <div class="icon-circle"><i data-lucide="message-circle" size="32" stroke-width="1.5"></i></div>
         <h2 class="text-xl font-bold text-stone-700">預約諮詢</h2>
         <p class="text-xs text-stone-400 mt-3 font-medium tracking-wider">由稅務小豆腐為您服務</p>
       </a>
     </div>
   </main>
 
-  <!-- 稅務新知頁面 -->
   <div id="page-articles" class="sub-page">
     <div class="max-w-4xl mx-auto pt-10 pb-20 px-4">
       <button onclick="closePage('page-articles')" class="mb-10 text-stone-400 hover:text-stone-800 flex items-center gap-2 font-bold transition text-sm">
@@ -442,7 +395,6 @@
     </div>
   </div>
 
-  <!-- 工具頁面 -->
   <div id="page-tools" class="sub-page">
     <div class="max-w-4xl mx-auto pt-10 pb-20 px-4">
       <button onclick="closePage('page-tools')" class="mb-10 text-stone-400 hover:text-stone-800 flex items-center gap-2 font-bold transition text-sm">
@@ -457,7 +409,6 @@
     </div>
   </div>
 
-  <!-- 常用表單及查詢頁面 -->
   <div id="page-forms" class="sub-page">
     <div class="max-w-4xl mx-auto pt-10 pb-20 px-4">
       <button onclick="closePage('page-forms')" class="mb-10 text-stone-400 hover:text-stone-800 flex items-center gap-2 font-bold transition text-sm">
@@ -472,7 +423,6 @@
     </div>
   </div>
 
-  <!-- 文章詳情 -->
   <div id="article-detail-page" class="sub-page">
     <div class="max-w-4xl mx-auto pt-10 pb-20 px-4">
       <button onclick="closePage('article-detail-page')" class="mb-10 text-stone-400 hover:text-stone-800 flex items-center gap-2 font-bold transition text-sm">
