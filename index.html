@@ -24,22 +24,47 @@
       overflow-x: hidden;
     }
     
-    /* ===== 啟動動畫 ===== */
+    /* ===== 啟動動畫 (方案一：Q彈軟萌風) ===== */
     #splash {
       position: fixed; inset: 0; background: var(--yellow);
-      display: flex; align-items: center; justify-content: center; z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999;
       transition: opacity 0.8s ease-out;
     }
-    .tofu-box {
-      width: 120px; height: 120px; background: white; border-radius: 24px;
+    .tofu-wrapper {
       position: relative;
-      box-shadow: 0 10px 0 rgba(0,0,0,0.05);
-      animation: bounce-tofu 0.8s infinite alternate cubic-bezier(0.45, 0, 0.55, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .tofu-box {
+      width: 100px; height: 100px; background: white; border-radius: 20px;
+      position: relative;
+      box-shadow: 0 8px 0 rgba(0,0,0,0.05);
+      animation: jelly-bounce 1.5s infinite;
       display: flex; align-items: center; justify-content: center;
+      z-index: 2;
+    }
+    /* 豆腐底部陰影 */
+    .tofu-shadow {
+      width: 60px; height: 10px;
+      background: rgba(84, 71, 63, 0.1);
+      border-radius: 50%;
+      margin-top: 20px;
+      animation: shadow-scale 1.5s infinite;
     }
     .tofu-eyes { display: flex; gap: 20px; }
-    .eye { width: 12px; height: 12px; background: #54473F; border-radius: 50%; animation: blink 3s infinite; }
-    @keyframes bounce-tofu { from { transform: translateY(0); } to { transform: translateY(-40px); } }
+    .eye { width: 10px; height: 10px; background: #54473F; border-radius: 50%; animation: blink 3s infinite; }
+
+    @keyframes jelly-bounce {
+      0%, 100% { transform: scale(1, 1) translateY(0); }
+      30% { transform: scale(1.15, 0.8) translateY(0); }
+      50% { transform: scale(0.85, 1.2) translateY(-60px); }
+      70% { transform: scale(1.05, 0.95) translateY(0); }
+    }
+    @keyframes shadow-scale {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.8); opacity: 0.2; }
+    }
     @keyframes blink { 0%, 90%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
 
     /* 通用卡片樣式 */
@@ -179,7 +204,6 @@
     };
 
     // --- 資料監聽 ---
-    // 分類排序保持權重排序
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), orderBy('weight', 'asc')), (snap) => {
       window.state.categories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderFilters('article-filters', 'currentArticleCat', 'filterArticle');
@@ -187,19 +211,16 @@
       renderFilters('form-filters', 'currentFormCat', 'filterForm');
     });
 
-    // 文章排序：改為標題 (title) 文字排序
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'articles'), orderBy('title', 'asc')), (snap) => {
       window.state.articles = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderArticles();
     });
 
-    // 小工具排序：改為名稱 (name) 文字排序
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'tools'), orderBy('name', 'asc')), (snap) => {
       window.state.tools = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderTools();
     });
 
-    // 常用表單排序：名稱 (name) 文字排序
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'forms'), orderBy('name', 'asc')), (snap) => {
       window.state.forms = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderForms();
@@ -251,10 +272,11 @@
         return;
       }
 
-        container.innerHTML = filtered.map(data => `
+      container.innerHTML = filtered.map(data => `
         <div class="article-block" onclick="openArticleDetail('${data.id}')">
           <div class="mb-4">${getCategoryBadges(data.categoryIds || (data.categoryId ? [data.categoryId] : []))}</div>
-          <h3 class="font-black text-2xl text-stone-700 mb-2 leading-tight">${data.title}</h3>
+          <h3 class="font-black text-2xl text-stone-700 mb-3 leading-tight">${data.title}</h3>
+          <p class="text-stone-400 line-clamp-2 mb-6 leading-relaxed text-sm">${stripHtml(data.content)}</p>
           <div class="flex items-center text-xs font-bold text-stone-300 uppercase tracking-widest group">
             繼續閱讀 <span class="ml-2 transform group-hover:translate-x-1 transition">→</span>
           </div>
@@ -340,14 +362,24 @@
 
     window.onload = () => { 
       lucide.createIcons();
-      setTimeout(() => { const s = document.getElementById('splash'); if(s){ s.style.opacity='0'; setTimeout(()=>s.style.display='none', 800); } }, 1500); 
+      setTimeout(() => { const s = document.getElementById('splash'); if(s){ s.style.opacity='0'; setTimeout(()=>s.style.display='none', 800); } }, 2500); 
     };
   </script>
 </head>
 <body>
 
+  <!-- 啟動動畫容器 -->
   <div id="splash">
-    <div class="tofu-box"><div class="tofu-eyes"><div class="eye"></div><div class="eye"></div></div></div>
+    <div class="tofu-wrapper">
+      <div class="tofu-box">
+        <div class="tofu-eyes">
+          <div class="eye"></div>
+          <div class="eye"></div>
+        </div>
+      </div>
+      <div class="tofu-shadow"></div>
+    </div>
+    <div class="mt-8 text-stone-500 font-bold tracking-[0.3em] text-sm opacity-60">稅務小豆腐</div>
   </div>
 
   <header class="py-24 px-4 text-center">
