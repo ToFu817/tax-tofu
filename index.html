@@ -24,32 +24,22 @@
       overflow-x: hidden;
     }
     
-    /* ===== 啟動動畫 (方案一：Q彈軟萌風) ===== */
+    /* ===== 啟動動畫 ===== */
     #splash {
       position: fixed; inset: 0; background: var(--yellow);
       display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999;
       transition: opacity 0.8s ease-out;
     }
-    .tofu-wrapper {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+    .tofu-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; }
     .tofu-box {
       width: 100px; height: 100px; background: white; border-radius: 20px;
-      position: relative;
-      box-shadow: 0 8px 0 rgba(0,0,0,0.05);
+      position: relative; box-shadow: 0 8px 0 rgba(0,0,0,0.05);
       animation: jelly-bounce 1.5s infinite;
-      display: flex; align-items: center; justify-content: center;
-      z-index: 2;
+      display: flex; align-items: center; justify-content: center; z-index: 2;
     }
     .tofu-shadow {
-      width: 60px; height: 10px;
-      background: rgba(84, 71, 63, 0.1);
-      border-radius: 50%;
-      margin-top: 20px;
-      animation: shadow-scale 1.5s infinite;
+      width: 60px; height: 10px; background: rgba(84, 71, 63, 0.1);
+      border-radius: 50%; margin-top: 20px; animation: shadow-scale 1.5s infinite;
     }
     .tofu-eyes { display: flex; gap: 20px; }
     .eye { width: 10px; height: 10px; background: #54473F; border-radius: 50%; animation: blink 3s infinite; }
@@ -68,14 +58,10 @@
 
     /* 通用卡片樣式 */
     .card {
-      background: var(--white);
-      border-radius: 32px;
-      padding: 32px;
+      background: var(--white); border-radius: 32px; padding: 32px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.02);
       transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      border: 1px solid rgba(0,0,0,0.02);
-      position: relative;
-      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.02); position: relative; overflow: hidden;
     }
     .card:hover { 
       transform: translateY(-8px); 
@@ -84,82 +70,41 @@
     }
     
     .icon-circle {
-      width: 80px; height: 80px;
-      background: var(--light-yellow);
-      border-radius: 24px;
+      width: 80px; height: 80px; background: var(--light-yellow); border-radius: 24px;
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 24px;
-      color: var(--accent);
-      transition: 0.3s;
+      margin: 0 auto 24px; color: var(--accent); transition: 0.3s;
     }
-    .card:hover .icon-circle {
-      background: var(--accent);
-      color: white;
-      transform: rotate(-5deg);
-    }
+    .card:hover .icon-circle { background: var(--accent); color: white; transform: rotate(-5deg); }
 
     .sub-page {
       position: fixed; top: 0; left: 100%; width: 100%; height: 100%;
       background: var(--light-yellow); z-index: 1000;
-      transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      overflow-y: auto;
+      transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto;
     }
     .sub-page.active { left: 0; }
 
     .cat-btn {
-      padding: 8px 20px;
-      border-radius: 99px;
-      background: #f5f5f0;
-      font-weight: 500;
-      font-size: 0.9rem;
-      transition: 0.3s;
-      color: #888;
-      border: 1px solid transparent;
+      padding: 8px 20px; border-radius: 99px; background: #f5f5f0;
+      font-weight: 500; font-size: 0.9rem; transition: 0.3s; color: #888; border: 1px solid transparent;
     }
-    .cat-btn.active {
-      background: var(--accent);
-      color: white;
-      box-shadow: 0 4px 12px rgba(141, 123, 104, 0.2);
-    }
+    .cat-btn.active { background: var(--accent); color: white; box-shadow: 0 4px 12px rgba(141, 123, 104, 0.2); }
 
     .tag-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      background: #f7f3f0;
-      color: #a39382;
-      border-radius: 8px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      margin-right: 6px;
-      border: 1px solid #efeae5;
+      display: inline-block; padding: 4px 12px; background: #f7f3f0;
+      color: #a39382; border-radius: 8px; font-size: 0.75rem; font-weight: bold; margin-right: 6px; border: 1px solid #efeae5;
     }
 
     .article-block {
-      background: var(--white);
-      border-radius: 28px;
-      padding: 32px;
-      margin-bottom: 24px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-      transition: 0.3s;
-      cursor: pointer;
-      border: 1px solid rgba(0,0,0,0.01);
+      background: var(--white); border-radius: 28px; padding: 32px; margin-bottom: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.03); transition: 0.3s; cursor: pointer; border: 1px solid rgba(0,0,0,0.01);
     }
-    .article-block:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 15px 35px rgba(0,0,0,0.07);
-    }
+    .article-block:hover { transform: translateY(-4px); box-shadow: 0 15px 35px rgba(0,0,0,0.07); }
 
     .detail-container {
-      background: var(--white);
-      border-radius: 40px;
-      padding: 40px 24px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.04);
-      min-height: 80vh;
+      background: var(--white); border-radius: 40px; padding: 40px 24px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.04); min-height: 80vh;
     }
-    @media (min-width: 768px) {
-      .detail-container { padding: 60px 80px; }
-    }
-
+    @media (min-width: 768px) { .detail-container { padding: 60px 80px; } }
     .article-body-content img { max-width: 100%; border-radius: 20px; margin: 24px 0; }
     
     ::-webkit-scrollbar { width: 6px; }
@@ -185,13 +130,15 @@
     const appId = "tax-tofu";
 
     window.state = {
-      articles: [],
-      tools: [],
-      forms: [],
-      categories: [],
-      currentArticleCat: 'all',
-      currentToolCat: 'all',
-      currentFormCat: 'all'
+      articles: [], tools: [], forms: [], categories: [],
+      currentArticleCat: 'all', currentToolCat: 'all', currentFormCat: 'all'
+    };
+
+    // 路由對照表
+    const routeMap = {
+      'articles': 'page-articles',
+      'tools': 'page-tools',
+      'forms': 'page-forms'
     };
 
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), orderBy('weight', 'asc')), (snap) => {
@@ -219,7 +166,6 @@
     function renderFilters(containerId, stateKey, callbackName) {
       const container = document.getElementById(containerId);
       if (!container) return;
-      
       let html = `<button onclick="${callbackName}('all')" class="cat-btn ${window.state[stateKey] === 'all' ? 'active' : ''}">全部</button>`;
       window.state.categories.forEach(cat => {
         html += `<button onclick="${callbackName}('${cat.id}')" class="cat-btn ${window.state[stateKey] === cat.id ? 'active' : ''}">${cat.name}</button>`;
@@ -227,41 +173,15 @@
       container.innerHTML = html;
     }
 
-    window.filterArticle = (id) => {
-      window.state.currentArticleCat = id;
-      renderFilters('article-filters', 'currentArticleCat', 'filterArticle');
-      renderArticles();
-    };
-
-    window.filterTool = (id) => {
-      window.state.currentToolCat = id;
-      renderFilters('tool-filters', 'currentToolCat', 'filterTool');
-      renderTools();
-    };
-
-    window.filterForm = (id) => {
-      window.state.currentFormCat = id;
-      renderFilters('form-filters', 'currentFormCat', 'filterForm');
-      renderForms();
-    };
+    window.filterArticle = (id) => { window.state.currentArticleCat = id; renderFilters('article-filters', 'currentArticleCat', 'filterArticle'); renderArticles(); };
+    window.filterTool = (id) => { window.state.currentToolCat = id; renderFilters('tool-filters', 'currentToolCat', 'filterTool'); renderTools(); };
+    window.filterForm = (id) => { window.state.currentFormCat = id; renderFilters('form-filters', 'currentFormCat', 'filterForm'); renderForms(); };
 
     function renderArticles() {
       const container = document.getElementById('articles-list');
       if (!container) return;
-
-      const filtered = window.state.currentArticleCat === 'all' 
-        ? window.state.articles 
-        : window.state.articles.filter(a => {
-            const cats = a.categoryIds || (a.categoryId ? [a.categoryId] : []);
-            return cats.includes(window.state.currentArticleCat);
-          });
-
-      if(filtered.length === 0) {
-        container.innerHTML = `<div class="text-center py-20 text-stone-300">目前尚無相關文章</div>`;
-        return;
-      }
-
-      // 已移除內容摘要 p 標籤，僅保留標題與按鈕
+      const filtered = window.state.currentArticleCat === 'all' ? window.state.articles : window.state.articles.filter(a => (a.categoryIds || (a.categoryId ? [a.categoryId] : [])).includes(window.state.currentArticleCat));
+      if(filtered.length === 0) { container.innerHTML = `<div class="text-center py-20 text-stone-300">目前尚無相關文章</div>`; return; }
       container.innerHTML = filtered.map(data => `
         <div class="article-block" onclick="openArticleDetail('${data.id}')">
           <div class="mb-4">${getCategoryBadges(data.categoryIds || (data.categoryId ? [data.categoryId] : []))}</div>
@@ -282,7 +202,7 @@
         <a href="${data.link}" target="_blank" class="card block">
           <div class="flex justify-between items-start">
             <div>
-              <span class="text-[10px] font-bold text-accent/50 uppercase tracking-widest mb-2 block">${getCategoryName(data.categoryId || (data.categoryIds ? data.categoryIds[0] : ""))}</span>
+              <span class="text-[10px] font-bold text-accent/50 uppercase tracking-widest mb-2 block">${getCategoryName(data.categoryId || (data.categoryIds?.[0]))}</span>
               <h3 class="font-bold text-lg text-stone-700 mb-2">${data.name}</h3>
               <p class="text-xs text-stone-400 line-clamp-1">${data.description || ''}</p>
             </div>
@@ -302,7 +222,7 @@
         <a href="${data.link}" target="_blank" class="card block">
           <div class="flex justify-between items-start">
             <div>
-              <span class="text-[10px] font-bold text-accent/50 uppercase tracking-widest mb-2 block">${getCategoryName(data.categoryId || (data.categoryIds ? data.categoryIds[0] : ""))}</span>
+              <span class="text-[10px] font-bold text-accent/50 uppercase tracking-widest mb-2 block">${getCategoryName(data.categoryId || (data.categoryIds?.[0]))}</span>
               <h3 class="font-bold text-lg text-stone-700 mb-2">${data.name}</h3>
               <p class="text-xs text-stone-400 line-clamp-1">${data.description || ''}</p>
             </div>
@@ -315,7 +235,6 @@
 
     function getCategoryName(id) { return window.state.categories.find(c => c.id === id)?.name || "一般"; }
     function getCategoryBadges(ids) { return ids ? ids.map(id => `<span class="tag-badge">${getCategoryName(id)}</span>`).join('') : ''; }
-    function stripHtml(html) { let t = document.createElement("DIV"); t.innerHTML = html; return t.textContent || t.innerText || ""; }
 
     window.openArticleDetail = (id) => {
       const article = window.state.articles.find(a => a.id === id);
@@ -326,12 +245,50 @@
       window.showPage('article-detail-page');
     };
 
-    window.showPage = (id) => { document.getElementById(id).classList.add('active'); document.body.style.overflow = 'hidden'; };
-    window.closePage = (id) => { document.getElementById(id).classList.remove('active'); document.body.style.overflow = 'auto'; };
+    // 修改過的頁面控制與路由邏輯
+    window.showPage = (id, updateHash = true) => { 
+      document.getElementById(id).classList.add('active'); 
+      document.body.style.overflow = 'hidden'; 
+      if (updateHash) {
+        const hash = Object.keys(routeMap).find(key => routeMap[key] === id);
+        if (hash) history.pushState({pageId: id}, '', `#${hash}`);
+      }
+    };
+    
+    window.closePage = (id, updateHash = true) => { 
+      document.getElementById(id).classList.remove('active'); 
+      document.body.style.overflow = 'auto'; 
+      if (updateHash) history.pushState(null, '', window.location.pathname);
+    };
+
+    // 處理網址跳轉
+    function handleHashRouting() {
+      const hash = window.location.hash.replace('#', '');
+      if (routeMap[hash]) {
+        window.showPage(routeMap[hash], false);
+        // 如果有 hash，關閉動畫以加速顯示
+        const s = document.getElementById('splash');
+        if(s) s.style.display = 'none';
+      } else {
+        // 回到首頁時關閉所有分頁
+        document.querySelectorAll('.sub-page').forEach(p => p.classList.remove('active'));
+        document.body.style.overflow = 'auto';
+      }
+    }
+
+    window.addEventListener('popstate', handleHashRouting);
 
     window.onload = () => { 
       lucide.createIcons();
-      setTimeout(() => { const s = document.getElementById('splash'); if(s){ s.style.opacity='0'; setTimeout(()=>s.style.display='none', 800); } }, 2500); 
+      handleHashRouting(); // 初始化檢查網址
+      
+      // 動畫僅在無 hash 時播放
+      if (!window.location.hash) {
+        setTimeout(() => { 
+          const s = document.getElementById('splash'); 
+          if(s){ s.style.opacity='0'; setTimeout(()=>s.style.display='none', 800); } 
+        }, 2500); 
+      }
     };
   </script>
 </head>
@@ -341,10 +298,7 @@
   <div id="splash">
     <div class="tofu-wrapper">
       <div class="tofu-box">
-        <div class="tofu-eyes">
-          <div class="eye"></div>
-          <div class="eye"></div>
-        </div>
+        <div class="tofu-eyes"><div class="eye"></div><div class="eye"></div></div>
       </div>
       <div class="tofu-shadow"></div>
     </div>
@@ -425,7 +379,7 @@
 
   <div id="article-detail-page" class="sub-page">
     <div class="max-w-4xl mx-auto pt-10 pb-20 px-4">
-      <button onclick="closePage('article-detail-page')" class="mb-10 text-stone-400 hover:text-stone-800 flex items-center gap-2 font-bold transition text-sm">
+      <button onclick="closePage('article-detail-page', false)" class="mb-10 text-stone-400 hover:text-stone-800 flex items-center gap-2 font-bold transition text-sm">
         <i data-lucide="arrow-left" size="16"></i> 返回列表
       </button>
       <div class="detail-container">
